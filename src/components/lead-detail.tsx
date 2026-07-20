@@ -1,0 +1,251 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import {
+  updateLeadStatus,
+  updateLeadFilmingStatus,
+  updateLeadDetails,
+  addLeadActivity,
+} from "@/lib/actions/leads";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { formatDateTime } from "@/lib/utils";
+import {
+  LEAD_STATUS_LABELS,
+  FILMING_STATUS_LABELS,
+  ACTIVITY_TYPE_LABELS,
+} from "@/lib/types";
+import { LEAD_STATUS_VARIANT, FILMING_STATUS_VARIANT } from "@/lib/status-styles";
+import type { Lead, LeadActivity, ActivityType, LeadStatus, FilmingStatus } from "@/lib/types";
+
+export function LeadDetail({
+  lead,
+  activities,
+}: {
+  lead: Lead;
+  activities: LeadActivity[];
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [dealSize, setDealSize] = useState(lead.deal_size?.toString() ?? "");
+  const [followUp, setFollowUp] = useState(
+    lead.next_follow_up_at ? lead.next_follow_up_at.slice(0, 10) : ""
+  );
+  const [activityType, setActivityType] = useState<ActivityType>("call");
+  const [note, setNote] = useState("");
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-3">
+      <div className="flex flex-col gap-6 lg:col-span-2">
+        <Card>
+          <CardHeader>
+            <div className="flex items-start justify-between">
+              <div>
+                <CardTitle className="text-lg">
+                  {lead.company_name ?? "Ukjent firma"}
+                </CardTitle>
+                <p className="text-sm text-neutral-500">{lead.contact_name ?? "–"}</p>
+              </div>
+              {lead.niche && <Badge>{lead.niche.name}</Badge>}
+            </div>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <p className="text-xs text-neutral-500">E-post</p>
+              <p className="text-neutral-900">{lead.email ?? "–"}</p>
+            </div>
+            <div>
+              <p className="text-xs text-neutral-500">Telefon</p>
+              <p className="text-neutral-900">{lead.phone ?? "–"}</p>
+            </div>
+            <div>
+              <p className="text-xs text-neutral-500">Kilde</p>
+              <p className="text-neutral-900">{lead.source}</p>
+            </div>
+            <div>
+              <p className="text-xs text-neutral-500">Tildelt dato</p>
+              <p className="text-neutral-900">{lead.assigned_date ?? "–"}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Hva er sagt / aktivitet</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2 rounded-md border border-neutral-200 p-3">
+              <div className="flex gap-2">
+                <Select
+                  value={activityType}
+                  onChange={(e) => setActivityType(e.target.value as ActivityType)}
+                  className="w-40"
+                >
+                  {(["call", "email", "note"] as ActivityType[]).map((type) => (
+                    <option key={type} value={type}>
+                      {ACTIVITY_TYPE_LABELS[type]}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <Textarea
+                placeholder="Hva ble sagt / avtalt?"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+              <Button
+                size="sm"
+                className="self-end"
+                disabled={isPending || !note.trim()}
+                onClick={() =>
+                  startTransition(async () => {
+                    await addLeadActivity(lead.id, activityType, note);
+                    setNote("");
+                  })
+                }
+              >
+                Legg til
+              </Button>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {activities.length === 0 && (
+                <p className="text-sm text-neutral-500">Ingen aktivitet registrert ennå.</p>
+              )}
+              {activities.map((activity) => (
+                <div key={activity.id} className="border-b border-neutral-100 pb-3 last:border-0">
+                  <div className="flex items-center justify-between">
+                    <Badge variant="default">{ACTIVITY_TYPE_LABELS[activity.type]}</Badge>
+                    <span className="text-xs text-neutral-400">
+                      {formatDateTime(activity.created_at)}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-neutral-700">{activity.content}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex flex-col gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Status</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label>Lead-status</Label>
+              <Select
+                defaultValue={lead.status}
+                disabled={isPending}
+                onChange={(e) =>
+                  startTransition(() =>
+                    updateLeadStatus(lead.id, e.target.value as LeadStatus)
+                  )
+                }
+              >
+                {Object.entries(LEAD_STATUS_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+              <Badge variant={LEAD_STATUS_VARIANT[lead.status]} className="w-fit">
+                Nåværende: {LEAD_STATUS_LABELS[lead.status]}
+              </Badge>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label>Filming-status</Label>
+              <Select
+                defaultValue={lead.filming_status}
+                disabled={isPending}
+                onChange={(e) =>
+                  startTransition(() =>
+                    updateLeadFilmingStatus(lead.id, e.target.value as FilmingStatus)
+                  )
+                }
+              >
+                {Object.entries(FILMING_STATUS_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+              <Badge variant={FILMING_STATUS_VARIANT[lead.filming_status]} className="w-fit">
+                Nåværende: {FILMING_STATUS_LABELS[lead.filming_status]}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Deal &amp; oppfølging</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="deal_size">Deal size (NOK)</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="deal_size"
+                  type="number"
+                  min={0}
+                  value={dealSize}
+                  onChange={(e) => setDealSize(e.target.value)}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={isPending}
+                  onClick={() =>
+                    startTransition(() =>
+                      updateLeadDetails(lead.id, {
+                        deal_size: dealSize ? Number(dealSize) : null,
+                      })
+                    )
+                  }
+                >
+                  Lagre
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="follow_up">Neste oppfølging</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="follow_up"
+                  type="date"
+                  value={followUp}
+                  onChange={(e) => setFollowUp(e.target.value)}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={isPending}
+                  onClick={() =>
+                    startTransition(() =>
+                      updateLeadDetails(lead.id, {
+                        next_follow_up_at: followUp
+                          ? new Date(followUp).toISOString()
+                          : null,
+                      })
+                    )
+                  }
+                >
+                  Lagre
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
