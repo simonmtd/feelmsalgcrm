@@ -65,8 +65,11 @@ export async function resetSellerPassword(
   if (newPassword.length < 8) return { error: "Passordet må være minst 8 tegn." };
 
   const supabase = createAdminClient();
+  // Confirm the email at the same time — a user created without "Auto Confirm"
+  // can't sign in even with a correct password until confirmed.
   const { error } = await supabase.auth.admin.updateUserById(sellerId, {
     password: newPassword,
+    email_confirm: true,
   });
   if (error) return { error: safeError("resetSellerPassword", error) };
 
