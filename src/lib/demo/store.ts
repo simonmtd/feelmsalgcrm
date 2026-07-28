@@ -164,6 +164,7 @@ function buildSeed(): DemoStore {
       assigned_to: spec.assignedTo?.id ?? null,
       assigned_date: assignedDate,
       next_follow_up_at: spec.followUpInDays != null ? daysAgo(-spec.followUpInDays, 12) : null,
+      follow_up_reminded_at: null,
       raw_hubspot_data: null,
       created_at: createdAt,
       updated_at: createdAt,

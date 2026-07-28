@@ -123,6 +123,16 @@ export async function updateLeadDetails(
   revalidatePath("/today");
 }
 
+/** Suggested follow-up: two days out, pushed to Monday if it lands on a weekend. */
+function suggestedFollowUp(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 2);
+  d.setHours(9, 0, 0, 0);
+  if (d.getDay() === 6) d.setDate(d.getDate() + 2); // Sat -> Mon
+  else if (d.getDay() === 0) d.setDate(d.getDate() + 1); // Sun -> Mon
+  return d.toISOString();
+}
+
 export async function addLeadActivity(
   leadId: string,
   type: ActivityType,
@@ -141,5 +151,17 @@ export async function addLeadActivity(
   });
   if (error) throwSafe("addLeadActivity", error);
 
+  // Logging a call or an email auto-suggests a follow-up date (the seller can
+  // still change it manually). Resetting the reminder timestamp ensures the
+  // daily job sends a fresh reminder for the new date.
+  if (type === "call" || type === "email") {
+    await supabase
+      .from("leads")
+      .update({ next_follow_up_at: suggestedFollowUp(), follow_up_reminded_at: null })
+      .eq("id", leadId);
+  }
+
   revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/leads");
+  revalidatePath("/today");
 }

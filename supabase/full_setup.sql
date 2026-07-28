@@ -1,7 +1,6 @@
 -- Feelm Leads — komplett databaseoppsett
 -- Lim hele denne fila inn i Supabase SQL-editoren og kjør én gang.
--- Bygget fra migrasjonene 0001–0007 i rekkefølge.
-
+-- Bygget fra migrasjonene 0001–0008 i rekkefølge.
 
 -- ======================================================================
 -- 0001_init.sql
@@ -397,3 +396,18 @@ alter table public.leads
   add column if not exists website text,
   add column if not exists industry text,
   add column if not exists job_title text;
+
+-- ======================================================================
+-- 0008_follow_up_reminders.sql
+-- ======================================================================
+-- Feelm lead-fordelingssystem: follow-up reminder tracking
+-- Run via `supabase db push` or paste into the Supabase SQL editor.
+
+-- Records when a follow-up reminder was last sent for a lead, so the daily job
+-- reminds once per follow-up date instead of every day.
+alter table public.leads
+  add column if not exists follow_up_reminded_at timestamptz;
+
+create index if not exists leads_follow_up_idx
+  on public.leads (next_follow_up_at)
+  where next_follow_up_at is not null;

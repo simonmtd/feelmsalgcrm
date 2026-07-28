@@ -48,6 +48,7 @@ function defaultsFor(table: TableName): Row {
         assigned_to: null,
         assigned_date: null,
         next_follow_up_at: null,
+        follow_up_reminded_at: null,
         deal_size: null,
         website: null,
         industry: null,
@@ -123,6 +124,16 @@ export class MockQueryBuilder implements PromiseLike<{ data: unknown; error: nul
 
   in(col: string, vals: unknown[]) {
     this.filters.push((r) => vals.includes(r[col]));
+    return this;
+  }
+
+  lte(col: string, val: unknown) {
+    this.filters.push((r) => r[col] != null && (r[col] as string | number) <= (val as string | number));
+    return this;
+  }
+
+  gte(col: string, val: unknown) {
+    this.filters.push((r) => r[col] != null && (r[col] as string | number) >= (val as string | number));
     return this;
   }
 

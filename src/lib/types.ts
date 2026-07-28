@@ -59,6 +59,7 @@ export interface Lead {
   assigned_to: string | null;
   assigned_date: string | null;
   next_follow_up_at: string | null;
+  follow_up_reminded_at: string | null;
   raw_hubspot_data: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
