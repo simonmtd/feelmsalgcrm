@@ -1,6 +1,6 @@
 -- Feelm Leads — komplett databaseoppsett
 -- Lim hele denne fila inn i Supabase SQL-editoren og kjør én gang.
--- Bygget fra migrasjonene 0001–0006 i rekkefølge.
+-- Bygget fra migrasjonene 0001–0007 i rekkefølge.
 
 
 -- ======================================================================
@@ -386,3 +386,14 @@ create policy "notifications_update_own" on public.notifications
 
 revoke update on public.notifications from authenticated;
 grant update (read_at) on public.notifications to authenticated;
+
+-- ======================================================================
+-- 0007_lead_enrichment.sql
+-- ======================================================================
+-- Feelm lead-fordelingssystem: enrichment fields from HubSpot
+-- Run via `supabase db push` or paste into the Supabase SQL editor.
+
+alter table public.leads
+  add column if not exists website text,
+  add column if not exists industry text,
+  add column if not exists job_title text;

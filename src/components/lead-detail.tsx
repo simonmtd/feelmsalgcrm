@@ -56,11 +56,52 @@ export function LeadDetail({
           <CardContent className="grid grid-cols-2 gap-3 text-sm">
             <div>
               <p className="text-xs text-wood-700">E-post</p>
-              <p className="text-ink">{lead.email ?? "–"}</p>
+              <p className="text-ink">
+                {lead.email ? (
+                  <a href={`mailto:${lead.email}`} className="hover:underline">
+                    {lead.email}
+                  </a>
+                ) : (
+                  "–"
+                )}
+              </p>
             </div>
             <div>
               <p className="text-xs text-wood-700">Telefon</p>
-              <p className="text-ink">{lead.phone ?? "–"}</p>
+              <p className="text-ink">
+                {lead.phone ? (
+                  <a href={`tel:${lead.phone}`} className="font-mono hover:underline">
+                    {lead.phone}
+                  </a>
+                ) : (
+                  "–"
+                )}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-wood-700">Nettside</p>
+              <p className="truncate text-ink">
+                {lead.website ? (
+                  <a
+                    href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:underline"
+                  >
+                    {lead.website}
+                  </a>
+                ) : (
+                  "–"
+                )}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-wood-700">Bransje</p>
+              <p className="text-ink">{lead.industry ?? "–"}</p>
+            </div>
+            <div>
+              <p className="text-xs text-wood-700">Tittel</p>
+              <p className="text-ink">{lead.job_title ?? "–"}</p>
             </div>
             <div>
               <p className="text-xs text-wood-700">Kilde</p>

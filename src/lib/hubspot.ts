@@ -10,6 +10,9 @@ export interface HubspotContact {
     email?: string;
     phone?: string;
     company?: string;
+    website?: string;
+    industry?: string;
+    jobtitle?: string;
     [key: string]: string | undefined;
   };
 }
@@ -38,7 +41,7 @@ export async function fetchHubspotContacts(
 
   const params = new URLSearchParams({
     limit: "100",
-    properties: "firstname,lastname,email,phone,company,website",
+    properties: "firstname,lastname,email,phone,company,website,industry,jobtitle",
   });
   if (after) params.set("after", after);
 

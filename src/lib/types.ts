@@ -52,6 +52,9 @@ export interface Lead {
   source: LeadSource;
   status: LeadStatus;
   deal_size: number | null;
+  website: string | null;
+  industry: string | null;
+  job_title: string | null;
   filming_status: FilmingStatus;
   assigned_to: string | null;
   assigned_date: string | null;

@@ -10,6 +10,9 @@ const DEMO_CONTACTS: HubspotContact[] = [
       email: "sindre@voldbygg.no",
       phone: "92345678",
       company: "Vold Byggservice",
+      website: "voldbygg.no",
+      industry: "Bygg og anlegg",
+      jobtitle: "Daglig leder",
     },
   },
   {
@@ -20,6 +23,9 @@ const DEMO_CONTACTS: HubspotContact[] = [
       email: "marte@kystrestaurant.no",
       phone: "97612345",
       company: "Kystrestauranten",
+      website: "kystrestauranten.no",
+      industry: "Restaurant og servering",
+      jobtitle: "Innehaver",
     },
   },
 ];
