@@ -1,6 +1,10 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { fetchHubspotContacts } from "@/lib/hubspot";
+import {
+  fetchHubspotContacts,
+  fetchHubspotCompanies,
+  readableIndustry,
+} from "@/lib/hubspot";
 import { matchNiche } from "@/lib/niche-matcher";
 import type { Niche } from "@/lib/types";
 
@@ -40,21 +44,36 @@ export async function runHubspotSync(): Promise<SyncResult> {
       const { results, nextAfter } = await fetchHubspotContacts(after);
       after = nextAfter;
 
+      // Resolve the associated company for every contact on this page in one
+      // batched call, so we can enrich with company name, industry and domain.
+      const companyIds = results.flatMap(
+        (c) => c.associations?.companies?.results?.map((r) => r.id) ?? []
+      );
+      const companies = await fetchHubspotCompanies(companyIds);
+
       for (const contact of results) {
         const p = contact.properties;
         const contactName = [p.firstname, p.lastname].filter(Boolean).join(" ") || null;
+
+        const companyId = contact.associations?.companies?.results?.[0]?.id;
+        const company = companyId ? companies.get(companyId) : undefined;
+
+        // Contact fields win; fall back to the associated company where empty.
+        const companyName = p.company ?? company?.name ?? null;
+        const industry = readableIndustry(p.industry ?? company?.industry);
+        const website = p.website ?? company?.domain ?? null;
 
         const { data: row, error } = await supabase
           .from("leads")
           .upsert(
             {
               hubspot_contact_id: contact.id,
-              company_name: p.company ?? null,
+              company_name: companyName,
               contact_name: contactName,
               email: p.email ?? null,
               phone: p.phone ?? null,
-              website: p.website ?? null,
-              industry: p.industry ?? null,
+              website,
+              industry,
               job_title: p.jobtitle ?? null,
               source: "hubspot",
               raw_hubspot_data: contact,
@@ -72,9 +91,9 @@ export async function runHubspotSync(): Promise<SyncResult> {
         const lead = row as { id: string; niche_id: string | null } | null;
         if (lead && !lead.niche_id) {
           const match = matchNiche(niches, {
-            company: p.company,
-            industry: p.industry,
-            website: p.website,
+            company: companyName,
+            industry,
+            website,
             title: p.jobtitle,
           });
           if (match) {
