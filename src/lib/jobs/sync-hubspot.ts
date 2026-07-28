@@ -51,56 +51,67 @@ export async function runHubspotSync(): Promise<SyncResult> {
       );
       const companies = await fetchHubspotCompanies(companyIds);
 
-      for (const contact of results) {
+      // Build all rows for this page, then write them in ONE bulk upsert. Doing
+      // it per-contact (a round-trip each) blew past Vercel's function timeout
+      // on large accounts.
+      const records = results.map((contact) => {
         const p = contact.properties;
         const contactName = [p.firstname, p.lastname].filter(Boolean).join(" ") || null;
-
         const companyId = contact.associations?.companies?.results?.[0]?.id;
         const company = companyId ? companies.get(companyId) : undefined;
+        return {
+          hubspot_contact_id: contact.id,
+          company_name: p.company ?? company?.name ?? null,
+          contact_name: contactName,
+          email: p.email ?? null,
+          phone: p.phone ?? null,
+          website: p.website ?? company?.domain ?? null,
+          industry: readableIndustry(p.industry ?? company?.industry),
+          job_title: p.jobtitle ?? null,
+          source: "hubspot",
+          raw_hubspot_data: contact,
+        };
+      });
 
-        // Contact fields win; fall back to the associated company where empty.
-        const companyName = p.company ?? company?.name ?? null;
-        const industry = readableIndustry(p.industry ?? company?.industry);
-        const website = p.website ?? company?.domain ?? null;
+      if (records.length === 0) continue;
 
-        const { data: row, error } = await supabase
-          .from("leads")
-          .upsert(
-            {
-              hubspot_contact_id: contact.id,
-              company_name: companyName,
-              contact_name: contactName,
-              email: p.email ?? null,
-              phone: p.phone ?? null,
-              website,
-              industry,
-              job_title: p.jobtitle ?? null,
-              source: "hubspot",
-              raw_hubspot_data: contact,
-            },
-            { onConflict: "hubspot_contact_id" }
-          )
-          .select("id, niche_id")
-          .single();
+      const { data: rows, error } = await supabase
+        .from("leads")
+        .upsert(records, { onConflict: "hubspot_contact_id" })
+        .select("id, niche_id, company_name, industry, website, job_title");
+      if (error) throw new Error(error.message);
 
-        if (error) continue;
-        recordsSynced += 1;
+      const upserted = (rows ?? []) as {
+        id: string;
+        niche_id: string | null;
+        company_name: string | null;
+        industry: string | null;
+        website: string | null;
+        job_title: string | null;
+      }[];
+      recordsSynced += upserted.length;
 
-        // Only classify leads that aren't already assigned to a niche, so an
-        // admin's manual classification is never overwritten.
-        const lead = row as { id: string; niche_id: string | null } | null;
-        if (lead && !lead.niche_id) {
-          const match = matchNiche(niches, {
-            company: companyName,
-            industry,
-            website,
-            title: p.jobtitle,
-          });
-          if (match) {
-            await supabase.from("leads").update({ niche_id: match.id }).eq("id", lead.id);
-            autoClassified += 1;
-          }
+      // Group still-unclassified leads by their matched niche, then apply one
+      // bulk update per niche. Admin's manual classification (niche_id set) is
+      // never touched.
+      const byNiche = new Map<string, string[]>();
+      for (const lead of upserted) {
+        if (lead.niche_id) continue;
+        const match = matchNiche(niches, {
+          company: lead.company_name,
+          industry: lead.industry,
+          website: lead.website,
+          title: lead.job_title,
+        });
+        if (match) {
+          const ids = byNiche.get(match.id) ?? [];
+          ids.push(lead.id);
+          byNiche.set(match.id, ids);
         }
+      }
+      for (const [nicheId, ids] of byNiche) {
+        await supabase.from("leads").update({ niche_id: nicheId }).in("id", ids);
+        autoClassified += ids.length;
       }
     } while (after);
 

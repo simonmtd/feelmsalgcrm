@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+
+// Give the "Sync nå" server action the full serverless budget for large accounts.
+export const maxDuration = 60;
 import { TriggerSyncButton } from "@/components/admin/trigger-sync-button";
 import { formatDateTime } from "@/lib/utils";
 import type { SyncRun } from "@/lib/types";

@@ -82,7 +82,7 @@ function defaultsFor(table: TableName): Row {
 type Mutation =
   | { type: "update"; payload: Row }
   | { type: "insert"; payload: Row }
-  | { type: "upsert"; payload: Row; onConflict?: string }
+  | { type: "upsert"; payload: Row | Row[]; onConflict?: string }
   | { type: "delete" };
 
 /**
@@ -228,18 +228,28 @@ export class MockQueryBuilder implements PromiseLike<{ data: unknown; error: nul
 
     if (this.mutation?.type === "upsert") {
       const { payload, onConflict = "id" } = this.mutation;
-      const existing = table.find((r) => r[onConflict] === payload[onConflict]);
-      let row: Row;
-      if (existing) {
-        Object.assign(existing, payload);
-        if ("updated_at" in existing) existing.updated_at = new Date().toISOString();
-        row = existing;
-      } else {
-        const now = new Date().toISOString();
-        row = { id: crypto.randomUUID(), created_at: now, updated_at: now, ...defaultsFor(this.table), ...payload };
-        table.push(row);
+      const items = Array.isArray(payload) ? payload : [payload];
+      const resultRows: Row[] = [];
+      for (const item of items) {
+        const existing = table.find((r) => r[onConflict] === item[onConflict]);
+        if (existing) {
+          Object.assign(existing, item);
+          if ("updated_at" in existing) existing.updated_at = new Date().toISOString();
+          resultRows.push(existing);
+        } else {
+          const now = new Date().toISOString();
+          const row: Row = {
+            id: crypto.randomUUID(),
+            created_at: now,
+            updated_at: now,
+            ...defaultsFor(this.table),
+            ...item,
+          };
+          table.push(row);
+          resultRows.push(row);
+        }
       }
-      const rows = this.finalizeRows([row]);
+      const rows = this.finalizeRows(resultRows);
       return { data: this.wantSingle ? rows[0] ?? null : rows, error: null, count: rows.length };
     }
 
