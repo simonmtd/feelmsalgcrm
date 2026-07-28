@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreateSellerForm } from "@/components/admin/create-seller-form";
 import { SellerActiveToggle } from "@/components/admin/seller-active-toggle";
+import { ResetPasswordButton } from "@/components/admin/reset-password-button";
 import type { Profile } from "@/lib/types";
 
 export default async function AdminSellersPage() {
@@ -52,7 +53,10 @@ export default async function AdminSellersPage() {
                     </Badge>
                   </td>
                   <td className="py-2">
-                    <SellerActiveToggle sellerId={seller.id} isActive={seller.is_active} />
+                    <div className="flex items-center justify-end gap-1">
+                      <ResetPasswordButton sellerId={seller.id} />
+                      <SellerActiveToggle sellerId={seller.id} isActive={seller.is_active} />
+                    </div>
                   </td>
                 </tr>
               ))}

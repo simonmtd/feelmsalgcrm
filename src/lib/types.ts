@@ -113,6 +113,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   "seller.create": "Opprettet bruker",
   "seller.activate": "Aktiverte bruker",
   "seller.deactivate": "Deaktiverte bruker",
+  "seller.reset_password": "Tilbakestilte passord",
   "niche.create": "Opprettet niche",
   "lead.reassign": "Omfordelte lead",
   "lead.bulk_assign": "Masse-fordelte leads",

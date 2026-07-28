@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { initialsFor } from "@/lib/avatar-color";
 import { InfoPopover } from "@/components/ui/info-popover";
@@ -18,6 +19,7 @@ const TITLES: TitleEntry[] = [
   { match: (p) => p === "/dashboard", title: "Dashboard", description: "Oversikt over pipelinen din i dag" },
   { match: (p) => p === "/today", title: "Dagens leads", description: "Leadsene som er tildelt deg i dag, med kontaktinfo" },
   { match: (p) => p === "/notifications", title: "Varsler", description: "Beskjeder om nye leads og tildelinger" },
+  { match: (p) => p === "/account", title: "Min konto", description: "Bytt passord" },
   { match: (p) => p === "/meetings", title: "Møter", description: "Registrer og følg opp bookede møter, med kunde, produkt og verdi" },
   { match: (p) => p === "/calendar", title: "Team-kalender", description: "Se salgsmøter og avtaler for hele teamet" },
   { match: (p) => p === "/leads" || p.startsWith("/leads/"), title: "Mine leads", description: "Alle leads som er eller har vært tildelt deg" },
@@ -69,6 +71,12 @@ export function PageHeader({ profile, unread = 0 }: { profile: Profile; unread?:
         <p className="break-all font-mono">{profile.email}</p>
         <p>Rolle: {profile.role === "admin" ? "Admin" : "Selger"}</p>
         <p>Aktiv niche: {profile.active_niche?.name ?? "ingen valgt"}</p>
+        <Link
+          href="/account"
+          className="mt-1 block rounded-sm border-2 border-ink bg-parchment px-3 py-1.5 text-center font-pixel text-[9px] uppercase tracking-wide text-ink shadow-[2px_2px_0_0_var(--color-ink)] transition-colors hover:bg-gold-100"
+        >
+          Bytt passord
+        </Link>
         <form action={signOut} className="pt-1">
           <Button type="submit" variant="outline" size="sm" className="w-full">
             Logg ut

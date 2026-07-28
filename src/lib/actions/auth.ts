@@ -49,3 +49,34 @@ export async function signOut() {
   await supabase.auth.signOut();
   redirect("/login");
 }
+
+export interface PasswordActionState {
+  error?: string;
+  success?: string;
+}
+
+/** Lets the logged-in user change their own password. */
+export async function changeOwnPassword(
+  _prevState: PasswordActionState | undefined,
+  formData: FormData
+): Promise<PasswordActionState> {
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+
+  if (password.length < 8) return { error: "Passordet må være minst 8 tegn." };
+  if (password !== confirm) return { error: "Passordene er ikke like." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Du er ikke logget inn." };
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    console.error("[changeOwnPassword]", error);
+    return { error: "Kunne ikke endre passordet. Prøv igjen." };
+  }
+
+  return { success: "Passordet ble endret." };
+}

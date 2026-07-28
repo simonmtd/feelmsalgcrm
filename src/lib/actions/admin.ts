@@ -57,6 +57,23 @@ export async function createSeller(
   return { success: `${email} ble opprettet.` };
 }
 
+export async function resetSellerPassword(
+  sellerId: string,
+  newPassword: string
+): Promise<{ error?: string; success?: string }> {
+  const actor = await requireAdmin();
+  if (newPassword.length < 8) return { error: "Passordet må være minst 8 tegn." };
+
+  const supabase = createAdminClient();
+  const { error } = await supabase.auth.admin.updateUserById(sellerId, {
+    password: newPassword,
+  });
+  if (error) return { error: safeError("resetSellerPassword", error) };
+
+  await logAudit(actor, "seller.reset_password", { targetType: "profile", targetId: sellerId });
+  return { success: "Nytt passord satt." };
+}
+
 export async function setSellerActive(sellerId: string, isActive: boolean) {
   const actor = await requireAdmin();
   const supabase = createAdminClient();

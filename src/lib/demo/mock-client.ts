@@ -53,6 +53,13 @@ export function createMockServerClient(cookieStore: CookieLike) {
         }
         return { error: null };
       },
+      async updateUser({ password }: { password?: string }) {
+        const uid = cookieStore.get(DEMO_COOKIE)?.value;
+        const profile = uid ? store.profiles.find((p) => p.id === uid) : undefined;
+        if (!profile) return { data: { user: null }, error: { message: "Not authenticated" } };
+        if (password) store.credentials[profile.email.toLowerCase()] = password;
+        return { data: { user: { id: profile.id, email: profile.email } }, error: null };
+      },
     },
   };
 }
@@ -90,6 +97,12 @@ export function createMockAdminClient() {
           store.profiles.push(profile);
           store.credentials[email.toLowerCase()] = password;
           return { data: { user: { id: profile.id, email } }, error: null };
+        },
+        async updateUserById(userId: string, attrs: { password?: string }) {
+          const profile = store.profiles.find((p) => p.id === userId);
+          if (!profile) return { data: null, error: { message: "Fant ikke bruker." } };
+          if (attrs.password) store.credentials[profile.email.toLowerCase()] = attrs.password;
+          return { data: { user: { id: profile.id, email: profile.email } }, error: null };
         },
       },
     },
