@@ -82,6 +82,70 @@ export interface SyncRun {
   error: string | null;
 }
 
+export type NotificationType = "lead_assigned" | "lead_reassigned" | "system";
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  message: string;
+  lead_id: string | null;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  actor_id: string | null;
+  actor_email: string;
+  action: string;
+  target_type: string | null;
+  target_id: string | null;
+  details: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export const AUDIT_ACTION_LABELS: Record<string, string> = {
+  "seller.create": "Opprettet bruker",
+  "seller.activate": "Aktiverte bruker",
+  "seller.deactivate": "Deaktiverte bruker",
+  "niche.create": "Opprettet niche",
+  "lead.reassign": "Omfordelte lead",
+  "lead.bulk_assign": "Masse-fordelte leads",
+  "lead.classify": "Klassifiserte lead",
+  "settings.daily_lead_count": "Endret daglig lead-antall",
+  "sync.trigger": "Startet HubSpot-sync",
+  "assignment.trigger": "Startet daglig fordeling",
+};
+
+export type MeetingType = "sales_meeting" | "demo" | "follow_up" | "internal" | "other";
+
+/** What Feelm is trying to sell in a given meeting. */
+export type ProductType =
+  | "campaign_film"
+  | "production_retainer"
+  | "social_media"
+  | "corporate_film"
+  | "event_film"
+  | "other";
+
+export interface Meeting {
+  id: string;
+  seller_id: string;
+  lead_id: string | null;
+  title: string;
+  type: MeetingType;
+  starts_at: string;
+  ends_at: string;
+  location: string | null;
+  notes: string | null;
+  deal_size: number | null;
+  product_type: ProductType | null;
+  created_at: string;
+  seller?: Pick<Profile, "id" | "full_name" | "email"> | null;
+  lead?: Pick<Lead, "id" | "company_name" | "contact_name"> | null;
+}
+
 export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   new: "Ny",
   assigned: "Tildelt",
@@ -104,4 +168,21 @@ export const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
   email: "E-post",
   status_change: "Statusendring",
   filming_update: "Filming-oppdatering",
+};
+
+export const MEETING_TYPE_LABELS: Record<MeetingType, string> = {
+  sales_meeting: "Salgsmøte",
+  demo: "Demo",
+  follow_up: "Oppfølging",
+  internal: "Internt møte",
+  other: "Annet",
+};
+
+export const PRODUCT_TYPE_LABELS: Record<ProductType, string> = {
+  campaign_film: "Kampanjefilm",
+  production_retainer: "Retainer produksjon",
+  social_media: "Sosiale medier",
+  corporate_film: "Bedriftsfilm",
+  event_film: "Eventfilm",
+  other: "Annet",
 };

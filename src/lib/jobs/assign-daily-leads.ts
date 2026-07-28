@@ -1,5 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { notify } from "@/lib/notifications";
 
 export interface AssignmentResult {
   ok: boolean;
@@ -54,7 +55,11 @@ export async function runDailyAssignment(): Promise<AssignmentResult> {
       .is("assigned_to", null)
       .select("id");
 
-    assignments[seller.id] = updated?.length ?? 0;
+    const count = updated?.length ?? 0;
+    assignments[seller.id] = count;
+    if (count > 0) {
+      await notify(seller.id, `Du har fått ${count} ${count === 1 ? "ny lead" : "nye leads"} tildelt i dag.`);
+    }
   }
 
   return { ok: true, assignments };

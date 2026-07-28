@@ -22,8 +22,10 @@ leads, lead_activities, sync_runs, app_settings) og RLS-policyer.
 
 1. **Supabase-prosjekt**
    - Opprett et prosjekt på [supabase.com](https://supabase.com)
-   - Kjør `supabase/migrations/0001_init.sql` i SQL-editoren (eller via
-     `supabase db push` med Supabase CLI)
+   - Kjør alle migrasjonene i `supabase/migrations/` i nummerert rekkefølge
+     (`0001` → `0006`) i SQL-editoren, eller via `supabase db push` med
+     Supabase CLI. De lager skjema + RLS (`0001`), møter (`0002`–`0003`),
+     RLS-herding (`0004`), revisjonslogg (`0005`) og varsler (`0006`).
    - Hent `Project URL`, `anon public key` og `service_role key` fra
      Project Settings → API
 

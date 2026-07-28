@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #dff0f9;
+  --foreground: #241812;
 }
 
 @theme inline {
@@ -10,17 +10,36 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
+  /* All existing `font-serif` headings render in the pixel font — titles only, never body text */
+  --font-serif: var(--font-press-start);
+  --font-pixel: var(--font-press-start);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Pixel/game palette (see reference: wood, forest, sky, gold, dark ink outlines) */
+  --color-ink: #1e1610;
+  --color-wood-900: #2a1d12;
+  --color-wood-800: #3e2a16;
+  --color-wood-700: #5c3d1f;
+  --color-wood-600: #7a5228;
+  --color-wood-500: #96693a;
+  --color-wood-200: #d9c39a;
+  --color-wood-100: #f0e3c8;
+  --color-parchment: #fbf3de;
+  --color-forest-700: #245722;
+  --color-forest-600: #2f6b2b;
+  --color-forest-500: #3e8e38;
+  --color-forest-400: #5db253;
+  --color-forest-100: #d9edd4;
+  --color-gold-600: #c6912b;
+  --color-gold-500: #e8b23a;
+  --color-gold-400: #ffd24a;
+  --color-gold-100: #fdeec2;
+  --color-himmel-500: #58b6dd;
+  --color-himmel-300: #9ed9f0;
+  --color-himmel-100: #dff0f9;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }

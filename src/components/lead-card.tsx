@@ -9,17 +9,19 @@ import type { Lead } from "@/lib/types";
 export function LeadCard({ lead }: { lead: Lead }) {
   return (
     <Link href={`/leads/${lead.id}`}>
-      <Card className="h-full transition-shadow hover:shadow-md">
+      <Card className="h-full transition-transform hover:-translate-y-0.5 hover:bg-gold-100">
         <CardContent className="flex flex-col gap-2 pt-5">
           <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="text-sm font-semibold text-neutral-900">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-ink">
                 {lead.company_name ?? "Ukjent firma"}
               </p>
-              <p className="text-xs text-neutral-500">{lead.contact_name ?? "–"}</p>
+              <p className="truncate text-xs text-wood-700">{lead.contact_name ?? "–"}</p>
             </div>
             {lead.niche && (
-              <Badge variant="default">{lead.niche.name}</Badge>
+              <Badge variant="default" className="shrink-0">
+                {lead.niche.name}
+              </Badge>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
@@ -30,7 +32,7 @@ export function LeadCard({ lead }: { lead: Lead }) {
               {FILMING_STATUS_LABELS[lead.filming_status]}
             </Badge>
           </div>
-          <p className="text-sm font-medium text-neutral-700">
+          <p className="font-mono text-sm font-bold text-wood-900">
             {formatCurrency(lead.deal_size)}
           </p>
         </CardContent>

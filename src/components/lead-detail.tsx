@@ -48,27 +48,27 @@ export function LeadDetail({
                 <CardTitle className="text-lg">
                   {lead.company_name ?? "Ukjent firma"}
                 </CardTitle>
-                <p className="text-sm text-neutral-500">{lead.contact_name ?? "–"}</p>
+                <p className="text-sm text-wood-700">{lead.contact_name ?? "–"}</p>
               </div>
               {lead.niche && <Badge>{lead.niche.name}</Badge>}
             </div>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <p className="text-xs text-neutral-500">E-post</p>
-              <p className="text-neutral-900">{lead.email ?? "–"}</p>
+              <p className="text-xs text-wood-700">E-post</p>
+              <p className="text-ink">{lead.email ?? "–"}</p>
             </div>
             <div>
-              <p className="text-xs text-neutral-500">Telefon</p>
-              <p className="text-neutral-900">{lead.phone ?? "–"}</p>
+              <p className="text-xs text-wood-700">Telefon</p>
+              <p className="text-ink">{lead.phone ?? "–"}</p>
             </div>
             <div>
-              <p className="text-xs text-neutral-500">Kilde</p>
-              <p className="text-neutral-900">{lead.source}</p>
+              <p className="text-xs text-wood-700">Kilde</p>
+              <p className="text-ink">{lead.source}</p>
             </div>
             <div>
-              <p className="text-xs text-neutral-500">Tildelt dato</p>
-              <p className="text-neutral-900">{lead.assigned_date ?? "–"}</p>
+              <p className="text-xs text-wood-700">Tildelt dato</p>
+              <p className="text-ink">{lead.assigned_date ?? "–"}</p>
             </div>
           </CardContent>
         </Card>
@@ -78,7 +78,7 @@ export function LeadDetail({
             <CardTitle>Hva er sagt / aktivitet</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2 rounded-md border border-neutral-200 p-3">
+            <div className="flex flex-col gap-2 rounded-sm border-2 border-ink bg-wood-100 p-3">
               <div className="flex gap-2">
                 <Select
                   value={activityType}
@@ -114,17 +114,17 @@ export function LeadDetail({
 
             <div className="flex flex-col gap-3">
               {activities.length === 0 && (
-                <p className="text-sm text-neutral-500">Ingen aktivitet registrert ennå.</p>
+                <p className="text-sm text-wood-700">Ingen aktivitet registrert ennå.</p>
               )}
               {activities.map((activity) => (
-                <div key={activity.id} className="border-b border-neutral-100 pb-3 last:border-0">
+                <div key={activity.id} className="border-b border-ink/15 pb-3 last:border-0">
                   <div className="flex items-center justify-between">
                     <Badge variant="default">{ACTIVITY_TYPE_LABELS[activity.type]}</Badge>
-                    <span className="text-xs text-neutral-400">
+                    <span className="text-xs text-wood-600">
                       {formatDateTime(activity.created_at)}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-neutral-700">{activity.content}</p>
+                  <p className="mt-1 text-sm text-wood-800">{activity.content}</p>
                 </div>
               ))}
             </div>

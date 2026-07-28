@@ -24,14 +24,7 @@ export default async function AdminNichesPage() {
     .is("niche_id", null);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold text-neutral-900">Nicher</h1>
-        <p className="text-sm text-neutral-500">
-          Selgerne velger selv hvilken niche de jobber med hver dag.
-        </p>
-      </div>
-
+    <>
       <Card>
         <CardHeader>
           <CardTitle>Ny niche</CardTitle>
@@ -49,23 +42,23 @@ export default async function AdminNichesPage() {
           {(niches as Niche[] | null)?.map((niche) => (
             <div
               key={niche.id}
-              className="flex items-center justify-between border-b border-neutral-100 py-2 text-sm last:border-0"
+              className="flex items-center justify-between border-b border-ink/15 py-2 text-sm last:border-0"
             >
-              <span className="font-medium text-neutral-900">{niche.name}</span>
-              <span className="text-neutral-500">
+              <span className="font-medium text-ink">{niche.name}</span>
+              <span className="text-wood-700">
                 {countsByNiche[niche.id] ?? 0} leads
               </span>
             </div>
           ))}
           {!niches?.length && (
-            <p className="text-sm text-neutral-500">Ingen nicher opprettet ennå.</p>
+            <p className="text-sm text-wood-700">Ingen nicher opprettet ennå.</p>
           )}
         </CardContent>
       </Card>
 
       {(unclassifiedCount ?? 0) > 0 && (
         <Card>
-          <CardContent className="pt-5 text-sm text-neutral-600">
+          <CardContent className="pt-5 text-sm text-wood-800">
             {unclassifiedCount} leads mangler niche.{" "}
             <a href="/admin/leads?niche=unclassified" className="font-medium underline">
               Klassifiser dem her
@@ -74,6 +67,6 @@ export default async function AdminNichesPage() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </>
   );
 }

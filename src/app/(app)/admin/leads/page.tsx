@@ -1,32 +1,44 @@
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { LeadNicheSelect } from "@/components/admin/lead-niche-select";
-import { LeadAssignSelect } from "@/components/admin/lead-assign-select";
 import { TriggerAssignmentButton } from "@/components/admin/trigger-assignment-button";
+import { BulkAssignLeadsTable } from "@/components/admin/bulk-assign-leads-table";
+import { LeadMap } from "@/components/leads/lead-map";
+import { ViewToggle } from "@/components/leads/view-toggle";
 import { LEAD_STATUS_LABELS } from "@/lib/types";
-import { LEAD_STATUS_VARIANT } from "@/lib/status-styles";
-import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Lead, LeadStatus, Niche, Profile } from "@/lib/types";
 
 export default async function AdminLeadsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ niche?: string; status?: string }>;
+  searchParams: Promise<{ niche?: string; status?: string; view?: string; q?: string }>;
 }) {
-  const { niche, status } = await searchParams;
+  const { niche, status, view, q } = await searchParams;
   const supabase = await createClient();
+  const isMap = view === "map";
+  const search = (q ?? "").trim().toLowerCase();
 
-  const [{ data: niches }, { data: sellers }] = await Promise.all([
+  const [{ data: niches }, { data: sellers }, { data: openLeads }] = await Promise.all([
     supabase.from("niches").select("*").order("name"),
     supabase
       .from("profiles")
       .select("id, full_name, email")
       .eq("role", "seller")
       .eq("is_active", true),
+    // Current workload per seller: open (not won/lost) assigned leads.
+    supabase
+      .from("leads")
+      .select("assigned_to")
+      .not("assigned_to", "is", null)
+      .not("status", "in", '("won","lost")'),
   ]);
+
+  const workload: Record<string, number> = {};
+  for (const row of (openLeads as { assigned_to: string | null }[] | null) ?? []) {
+    if (row.assigned_to) workload[row.assigned_to] = (workload[row.assigned_to] ?? 0) + 1;
+  }
 
   let query = supabase
     .from("leads")
@@ -38,17 +50,23 @@ export default async function AdminLeadsPage({
   else if (niche) query = query.eq("niche_id", niche);
   if (status) query = query.eq("status", status as LeadStatus);
 
-  const { data: leads } = await query;
+  const { data: leadsRaw } = await query;
+  const leads = search
+    ? ((leadsRaw as Lead[] | null) ?? []).filter((l) =>
+        [l.company_name, l.contact_name, l.email]
+          .filter(Boolean)
+          .some((field) => field!.toLowerCase().includes(search))
+      )
+    : (leadsRaw as Lead[] | null) ?? [];
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-neutral-900">Alle leads</h1>
-          <p className="text-sm text-neutral-500">
-            Klassifiser niche, omfordel selgere, følg med på pipeline.
-          </p>
-        </div>
+    <>
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <ViewToggle
+          basePath="/admin/leads"
+          params={{ niche, status, q }}
+          active={isMap ? "map" : "list"}
+        />
         <TriggerAssignmentButton />
       </div>
 
@@ -56,7 +74,16 @@ export default async function AdminLeadsPage({
         <CardContent className="pt-5">
           <form method="get" className="flex flex-wrap items-end gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-neutral-500">Niche</label>
+              <label className="text-xs font-medium text-wood-700">Søk</label>
+              <Input
+                name="q"
+                defaultValue={q ?? ""}
+                placeholder="Firma, kontakt eller e-post…"
+                className="w-60"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-wood-700">Niche</label>
               <Select name="niche" defaultValue={niche ?? ""} className="w-48">
                 <option value="">Alle</option>
                 <option value="unclassified">Ikke klassifisert</option>
@@ -68,8 +95,14 @@ export default async function AdminLeadsPage({
               </Select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-neutral-500">Status</label>
-              <Select name="status" defaultValue={status ?? ""} className="w-44">
+              <label className="text-xs font-medium text-wood-700">
+                Status
+              </label>
+              <Select
+                name="status"
+                defaultValue={status ?? ""}
+                className="w-44"
+              >
                 <option value="">Alle</option>
                 {Object.entries(LEAD_STATUS_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -85,63 +118,19 @@ export default async function AdminLeadsPage({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{leads?.length ?? 0} leads</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-neutral-200 text-left text-xs uppercase text-neutral-500">
-                <th className="py-2 pr-4">Firma</th>
-                <th className="py-2 pr-4">Status</th>
-                <th className="py-2 pr-4">Deal size</th>
-                <th className="py-2 pr-4">Niche</th>
-                <th className="py-2 pr-4">Selger</th>
-                <th className="py-2 pr-4">Opprettet</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(leads as Lead[] | null)?.map((lead) => (
-                <tr key={lead.id} className="border-b border-neutral-100">
-                  <td className="py-2 pr-4">
-                    <a href={`/leads/${lead.id}`} className="font-medium text-neutral-900 hover:underline">
-                      {lead.company_name ?? "Ukjent firma"}
-                    </a>
-                    <p className="text-xs text-neutral-500">{lead.contact_name}</p>
-                  </td>
-                  <td className="py-2 pr-4">
-                    <Badge variant={LEAD_STATUS_VARIANT[lead.status]}>
-                      {LEAD_STATUS_LABELS[lead.status]}
-                    </Badge>
-                  </td>
-                  <td className="py-2 pr-4">{formatCurrency(lead.deal_size)}</td>
-                  <td className="py-2 pr-4">
-                    <LeadNicheSelect
-                      leadId={lead.id}
-                      nicheId={lead.niche_id}
-                      niches={(niches as Niche[]) ?? []}
-                    />
-                  </td>
-                  <td className="py-2 pr-4">
-                    <LeadAssignSelect
-                      leadId={lead.id}
-                      assignedTo={lead.assigned_to}
-                      sellers={(sellers as Pick<Profile, "id" | "full_name" | "email">[]) ?? []}
-                    />
-                  </td>
-                  <td className="py-2 pr-4 text-neutral-500">{formatDate(lead.created_at)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {!leads?.length && (
-            <p className="py-6 text-center text-sm text-neutral-500">
-              Ingen leads matcher filteret.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+      {isMap ? (
+        <LeadMap
+          leads={(leads as Lead[]) ?? []}
+          niches={(niches as Niche[]) ?? []}
+        />
+      ) : (
+        <BulkAssignLeadsTable
+          leads={(leads as Lead[]) ?? []}
+          niches={(niches as Niche[]) ?? []}
+          sellers={(sellers as Pick<Profile, "id" | "full_name" | "email">[]) ?? []}
+          workload={workload}
+        />
+      )}
+    </>
   );
 }

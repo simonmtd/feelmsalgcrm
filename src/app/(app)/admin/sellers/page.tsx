@@ -13,12 +13,7 @@ export default async function AdminSellersPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold text-neutral-900">Selgere</h1>
-        <p className="text-sm text-neutral-500">Opprett og administrer brukere.</p>
-      </div>
-
+    <>
       <Card>
         <CardHeader>
           <CardTitle>Ny bruker</CardTitle>
@@ -35,7 +30,7 @@ export default async function AdminSellersPage() {
         <CardContent className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-neutral-200 text-left text-xs uppercase text-neutral-500">
+              <tr className="border-b border-ink/25 text-left text-xs uppercase text-wood-700">
                 <th className="py-2 pr-4">Navn</th>
                 <th className="py-2 pr-4">E-post</th>
                 <th className="py-2 pr-4">Rolle</th>
@@ -46,7 +41,7 @@ export default async function AdminSellersPage() {
             </thead>
             <tbody>
               {(sellers as Profile[] | null)?.map((seller) => (
-                <tr key={seller.id} className="border-b border-neutral-100">
+                <tr key={seller.id} className="border-b border-ink/15">
                   <td className="py-2 pr-4">{seller.full_name ?? "–"}</td>
                   <td className="py-2 pr-4">{seller.email}</td>
                   <td className="py-2 pr-4 capitalize">{seller.role}</td>
@@ -65,6 +60,6 @@ export default async function AdminSellersPage() {
           </table>
         </CardContent>
       </Card>
-    </div>
+    </>
   );
 }

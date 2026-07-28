@@ -1,3 +1,5 @@
+import { DEMO_MOCK } from "@/lib/demo/mode";
+
 const HUBSPOT_BASE = "https://api.hubapi.com";
 
 export interface HubspotContact {
@@ -24,6 +26,11 @@ interface HubspotContactsResponse {
 export async function fetchHubspotContacts(
   after?: string
 ): Promise<{ results: HubspotContact[]; nextAfter?: string }> {
+  if (DEMO_MOCK) {
+    const { fetchDemoHubspotContacts } = await import("@/lib/demo/hubspot");
+    return fetchDemoHubspotContacts(after);
+  }
+
   const token = process.env.HUBSPOT_ACCESS_TOKEN;
   if (!token) {
     throw new Error("HUBSPOT_ACCESS_TOKEN er ikke satt.");

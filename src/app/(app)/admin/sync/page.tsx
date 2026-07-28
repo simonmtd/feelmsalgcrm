@@ -20,15 +20,8 @@ export default async function AdminSyncPage() {
     .limit(25);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-neutral-900">HubSpot-sync</h1>
-          <p className="text-sm text-neutral-500">
-            Henter kontakter fra HubSpot inn i leads-databasen. Kjører automatisk
-            via cron, kan også trigges manuelt.
-          </p>
-        </div>
+    <>
+      <div className="flex justify-end">
         <TriggerSyncButton />
       </div>
 
@@ -39,7 +32,7 @@ export default async function AdminSyncPage() {
         <CardContent className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-neutral-200 text-left text-xs uppercase text-neutral-500">
+              <tr className="border-b border-ink/25 text-left text-xs uppercase text-wood-700">
                 <th className="py-2 pr-4">Startet</th>
                 <th className="py-2 pr-4">Fullført</th>
                 <th className="py-2 pr-4">Status</th>
@@ -49,7 +42,7 @@ export default async function AdminSyncPage() {
             </thead>
             <tbody>
               {(runs as SyncRun[] | null)?.map((run) => (
-                <tr key={run.id} className="border-b border-neutral-100">
+                <tr key={run.id} className="border-b border-ink/15">
                   <td className="py-2 pr-4">{formatDateTime(run.started_at)}</td>
                   <td className="py-2 pr-4">{formatDateTime(run.finished_at)}</td>
                   <td className="py-2 pr-4">
@@ -62,12 +55,12 @@ export default async function AdminSyncPage() {
             </tbody>
           </table>
           {!runs?.length && (
-            <p className="py-6 text-center text-sm text-neutral-500">
+            <p className="py-6 text-center text-sm text-wood-700">
               Ingen sync-jobber kjørt ennå.
             </p>
           )}
         </CardContent>
       </Card>
-    </div>
+    </>
   );
 }
