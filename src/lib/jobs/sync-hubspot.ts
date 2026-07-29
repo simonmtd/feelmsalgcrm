@@ -25,15 +25,17 @@ export interface SyncResult {
  * matches one; unmatched leads stay unclassified for manual review.
  */
 export async function runHubspotSync(): Promise<SyncResult> {
-  // Bail out before touching the DB when no token is configured. On Vercel a
-  // second, token-less invocation was firing each tick and polluting the sync
-  // history with 401 rows — this makes it a clean no-op instead.
-  if (!DEMO_MOCK && !process.env.HUBSPOT_ACCESS_TOKEN) {
+  // Bail out before touching the DB unless a real HubSpot token is configured.
+  // A duplicate deployment with a missing or wrong (non-"pat-") token was firing
+  // each tick and polluting the sync history with 401 rows — this makes such an
+  // invocation a clean no-op instead of a logged error.
+  const token = process.env.HUBSPOT_ACCESS_TOKEN;
+  if (!DEMO_MOCK && (!token || !token.startsWith("pat-"))) {
     return {
       ok: false,
       recordsSynced: 0,
       autoClassified: 0,
-      error: "HUBSPOT_ACCESS_TOKEN mangler — hoppet over uten å logge.",
+      error: "HUBSPOT_ACCESS_TOKEN mangler eller er ugyldig — hoppet over uten å logge.",
     };
   }
 
