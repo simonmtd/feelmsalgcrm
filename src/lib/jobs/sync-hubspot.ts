@@ -1,5 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { DEMO_MOCK } from "@/lib/demo/mode";
 import {
   fetchHubspotContacts,
   fetchHubspotCompanies,
@@ -24,6 +25,18 @@ export interface SyncResult {
  * matches one; unmatched leads stay unclassified for manual review.
  */
 export async function runHubspotSync(): Promise<SyncResult> {
+  // Bail out before touching the DB when no token is configured. On Vercel a
+  // second, token-less invocation was firing each tick and polluting the sync
+  // history with 401 rows — this makes it a clean no-op instead.
+  if (!DEMO_MOCK && !process.env.HUBSPOT_ACCESS_TOKEN) {
+    return {
+      ok: false,
+      recordsSynced: 0,
+      autoClassified: 0,
+      error: "HUBSPOT_ACCESS_TOKEN mangler — hoppet over uten å logge.",
+    };
+  }
+
   const supabase = createAdminClient();
 
   const { data: run } = await supabase
