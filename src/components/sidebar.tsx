@@ -13,6 +13,7 @@ import {
   Tags,
   RefreshCw,
   Settings,
+  BarChart3,
   ScrollText,
   LogOut,
   Clapperboard,
@@ -30,6 +31,7 @@ interface NavLink {
 
 const adminExtraLinks: NavLink[] = [
   { href: "/admin/leads", label: "Alle leads", icon: Building2 },
+  { href: "/admin/stats", label: "Statistikk", icon: BarChart3 },
   { href: "/admin/sellers", label: "Selgere", icon: Users },
   { href: "/admin/niches", label: "Nicher", icon: Tags },
   { href: "/admin/sync", label: "Sync", icon: RefreshCw },

@@ -24,6 +24,7 @@ const TITLES: TitleEntry[] = [
   { match: (p) => p === "/calendar", title: "Team-kalender", description: "Se salgsmøter og avtaler for hele teamet" },
   { match: (p) => p === "/leads" || p.startsWith("/leads/"), title: "Mine leads", description: "Alle leads som er eller har vært tildelt deg" },
   { match: (p) => p === "/admin/leads", title: "Alle leads", description: "Klassifiser niche, omfordel selgere, følg med på pipeline" },
+  { match: (p) => p === "/admin/stats", title: "Statistikk", description: "Ytelse per selger — leads, vinnrate og verdi" },
   { match: (p) => p === "/admin/sellers", title: "Selgere", description: "Opprett og administrer brukere" },
   { match: (p) => p === "/admin/niches", title: "Nicher", description: "Bransjene selgerne velger mellom hver dag" },
   { match: (p) => p === "/admin/sync", title: "HubSpot-sync", description: "Historikk og manuell trigger av kontakt-import" },

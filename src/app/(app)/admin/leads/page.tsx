@@ -19,9 +19,10 @@ export default async function AdminLeadsPage({
     view?: string;
     q?: string;
     period?: string;
+    quality?: string;
   }>;
 }) {
-  const { niche, status, view, q, period } = await searchParams;
+  const { niche, status, view, q, period, quality } = await searchParams;
   const supabase = await createClient();
   const isMap = view === "map";
   const search = (q ?? "").trim().toLowerCase();
@@ -68,6 +69,7 @@ export default async function AdminLeadsPage({
   else if (niche) query = query.eq("niche_id", niche);
   if (status) query = query.eq("status", status as LeadStatus);
   if (periodStart) query = query.gte("created_at", periodStart);
+  if (quality === "phone") query = query.not("phone", "is", null);
 
   const { data: leadsRaw } = await query;
   const leads = search
@@ -83,7 +85,7 @@ export default async function AdminLeadsPage({
       <div className="flex flex-wrap items-center justify-end gap-3">
         <ViewToggle
           basePath="/admin/leads"
-          params={{ niche, status, q, period }}
+          params={{ niche, status, q, period, quality }}
           active={isMap ? "map" : "list"}
         />
         <TriggerAssignmentButton />
@@ -136,6 +138,13 @@ export default async function AdminLeadsPage({
                 <option value="">Hele tiden</option>
                 <option value="today">Nye i dag</option>
                 <option value="week">Siste 7 dager</option>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-wood-700">Kvalitet</label>
+              <Select name="quality" defaultValue={quality ?? ""} className="w-40">
+                <option value="">Alle</option>
+                <option value="phone">Kun med telefon</option>
               </Select>
             </div>
             <Button type="submit" variant="outline">

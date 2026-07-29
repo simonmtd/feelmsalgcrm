@@ -31,6 +31,11 @@ export function LeadCard({ lead }: { lead: Lead }) {
             <Badge variant={FILMING_STATUS_VARIANT[lead.filming_status]}>
               {FILMING_STATUS_LABELS[lead.filming_status]}
             </Badge>
+            {!lead.phone && (
+              <Badge variant="red" title="Mangler telefonnummer">
+                Mangler tlf
+              </Badge>
+            )}
           </div>
           <p className="font-mono text-sm font-bold text-wood-900">
             {formatCurrency(lead.deal_size)}
