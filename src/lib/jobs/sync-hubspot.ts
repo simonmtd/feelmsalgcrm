@@ -16,6 +16,17 @@ export interface SyncResult {
   error?: string;
 }
 
+interface ExistingLead {
+  hubspot_contact_id: string;
+  company_name: string | null;
+  contact_name: string | null;
+  email: string | null;
+  phone: string | null;
+  website: string | null;
+  industry: string | null;
+  job_title: string | null;
+}
+
 /**
  * Pulls contacts from HubSpot and upserts them into public.leads, matched on
  * hubspot_contact_id. Contact-info + enrichment columns (company, name, email,
@@ -66,6 +77,20 @@ export async function runHubspotSync(): Promise<SyncResult> {
       );
       const companies = await fetchHubspotCompanies(companyIds);
 
+      // Fetch the current DB values so a HubSpot blank never wipes out info a
+      // seller/admin filled in manually (e.g. a phone number HubSpot lacks).
+      // HubSpot still wins whenever it actually has a value.
+      const { data: existingData } = await supabase
+        .from("leads")
+        .select("hubspot_contact_id, company_name, contact_name, email, phone, website, industry, job_title")
+        .in(
+          "hubspot_contact_id",
+          results.map((c) => c.id)
+        );
+      const existing = new Map(
+        ((existingData as ExistingLead[] | null) ?? []).map((r) => [r.hubspot_contact_id, r])
+      );
+
       // Build all rows for this page, then write them in ONE bulk upsert. Doing
       // it per-contact (a round-trip each) blew past Vercel's function timeout
       // on large accounts.
@@ -74,15 +99,16 @@ export async function runHubspotSync(): Promise<SyncResult> {
         const contactName = [p.firstname, p.lastname].filter(Boolean).join(" ") || null;
         const companyId = contact.associations?.companies?.results?.[0]?.id;
         const company = companyId ? companies.get(companyId) : undefined;
+        const prev = existing.get(contact.id);
         return {
           hubspot_contact_id: contact.id,
-          company_name: p.company ?? company?.name ?? null,
-          contact_name: contactName,
-          email: p.email ?? null,
-          phone: p.phone ?? null,
-          website: p.website ?? company?.domain ?? null,
-          industry: readableIndustry(p.industry ?? company?.industry),
-          job_title: p.jobtitle ?? null,
+          company_name: p.company ?? company?.name ?? prev?.company_name ?? null,
+          contact_name: contactName ?? prev?.contact_name ?? null,
+          email: p.email ?? prev?.email ?? null,
+          phone: p.phone ?? prev?.phone ?? null,
+          website: p.website ?? company?.domain ?? prev?.website ?? null,
+          industry: readableIndustry(p.industry ?? company?.industry) ?? prev?.industry ?? null,
+          job_title: p.jobtitle ?? prev?.job_title ?? null,
           source: "hubspot",
           raw_hubspot_data: contact,
         };

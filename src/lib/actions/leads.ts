@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireProfile } from "@/lib/dal";
 import { throwSafe } from "@/lib/actions/errors";
 import {
@@ -131,6 +132,59 @@ function suggestedFollowUp(): string {
   if (d.getDay() === 6) d.setDate(d.getDate() + 2); // Sat -> Mon
   else if (d.getDay() === 0) d.setDate(d.getDate() + 1); // Sun -> Mon
   return d.toISOString();
+}
+
+export interface LeadContactFields {
+  company_name?: string | null;
+  contact_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  industry?: string | null;
+  job_title?: string | null;
+}
+
+/**
+ * Lets a seller (own lead) or admin manually fill in / correct contact info —
+ * e.g. add a phone number HubSpot didn't have. Runs through the service-role
+ * client after verifying ownership, since RLS column grants otherwise block
+ * sellers from editing contact fields.
+ */
+export async function updateLeadContact(leadId: string, fields: LeadContactFields) {
+  const { supabase } = await assertOwnsLead(leadId);
+  // assertOwnsLead already checked ownership; use it only for the check. The
+  // write goes through the service-role client to bypass column-level grants.
+  void supabase;
+
+  const clean: Record<string, string | null> = {};
+  const trim = (v: string | null | undefined) => {
+    if (v === undefined) return undefined;
+    const t = (v ?? "").trim();
+    return t === "" ? null : t.slice(0, 300);
+  };
+  for (const key of [
+    "company_name",
+    "contact_name",
+    "email",
+    "phone",
+    "website",
+    "industry",
+    "job_title",
+  ] as const) {
+    if (key in fields) {
+      const value = trim(fields[key]);
+      if (value !== undefined) clean[key] = value;
+    }
+  }
+  if (Object.keys(clean).length === 0) return;
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("leads").update(clean).eq("id", leadId);
+  if (error) throwSafe("updateLeadContact", error);
+
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/leads");
+  revalidatePath("/today");
 }
 
 export async function addLeadActivity(

@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Pencil } from "lucide-react";
 import {
   updateLeadStatus,
   updateLeadFilmingStatus,
   updateLeadDetails,
+  updateLeadContact,
   addLeadActivity,
 } from "@/lib/actions/leads";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,80 +40,160 @@ export function LeadDetail({
   const [activityType, setActivityType] = useState<ActivityType>("call");
   const [note, setNote] = useState("");
 
+  const [editingContact, setEditingContact] = useState(false);
+  const [contact, setContact] = useState({
+    company_name: lead.company_name ?? "",
+    contact_name: lead.contact_name ?? "",
+    email: lead.email ?? "",
+    phone: lead.phone ?? "",
+    website: lead.website ?? "",
+    industry: lead.industry ?? "",
+    job_title: lead.job_title ?? "",
+  });
+
+  function saveContact() {
+    startTransition(async () => {
+      await updateLeadContact(lead.id, contact);
+      setEditingContact(false);
+    });
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="flex flex-col gap-6 lg:col-span-2">
         <Card>
           <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
                 <CardTitle className="text-lg">
                   {lead.company_name ?? "Ukjent firma"}
                 </CardTitle>
                 <p className="text-sm text-wood-700">{lead.contact_name ?? "–"}</p>
               </div>
-              {lead.niche && <Badge>{lead.niche.name}</Badge>}
+              <div className="flex shrink-0 items-center gap-2">
+                {lead.niche && <Badge>{lead.niche.name}</Badge>}
+                {!editingContact && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setEditingContact(true)}
+                  >
+                    <Pencil className="h-3.5 w-3.5" /> Rediger
+                  </Button>
+                )}
+              </div>
             </div>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <p className="text-xs text-wood-700">E-post</p>
-              <p className="text-ink">
-                {lead.email ? (
-                  <a href={`mailto:${lead.email}`} className="hover:underline">
-                    {lead.email}
-                  </a>
-                ) : (
-                  "–"
-                )}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-wood-700">Telefon</p>
-              <p className="text-ink">
-                {lead.phone ? (
-                  <a href={`tel:${lead.phone}`} className="font-mono hover:underline">
-                    {lead.phone}
-                  </a>
-                ) : (
-                  "–"
-                )}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-wood-700">Nettside</p>
-              <p className="truncate text-ink">
-                {lead.website ? (
-                  <a
-                    href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:underline"
-                  >
-                    {lead.website}
-                  </a>
-                ) : (
-                  "–"
-                )}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-wood-700">Bransje</p>
-              <p className="text-ink">{lead.industry ?? "–"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-wood-700">Tittel</p>
-              <p className="text-ink">{lead.job_title ?? "–"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-wood-700">Kilde</p>
-              <p className="text-ink">{lead.source}</p>
-            </div>
-            <div>
-              <p className="text-xs text-wood-700">Tildelt dato</p>
-              <p className="text-ink">{lead.assigned_date ?? "–"}</p>
-            </div>
-          </CardContent>
+          {editingContact ? (
+            <CardContent className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+              {(
+                [
+                  ["company_name", "Firma"],
+                  ["contact_name", "Kontaktperson"],
+                  ["email", "E-post"],
+                  ["phone", "Telefon"],
+                  ["website", "Nettside"],
+                  ["industry", "Bransje"],
+                  ["job_title", "Tittel"],
+                ] as const
+              ).map(([key, label]) => (
+                <div key={key} className="flex flex-col gap-1.5">
+                  <Label htmlFor={`c-${key}`}>{label}</Label>
+                  <Input
+                    id={`c-${key}`}
+                    value={contact[key]}
+                    onChange={(e) => setContact((c) => ({ ...c, [key]: e.target.value }))}
+                  />
+                </div>
+              ))}
+              <div className="flex items-end gap-2 sm:col-span-2">
+                <Button type="button" size="sm" disabled={isPending} onClick={saveContact}>
+                  {isPending ? "Lagrer…" : "Lagre"}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={isPending}
+                  onClick={() => {
+                    setEditingContact(false);
+                    setContact({
+                      company_name: lead.company_name ?? "",
+                      contact_name: lead.contact_name ?? "",
+                      email: lead.email ?? "",
+                      phone: lead.phone ?? "",
+                      website: lead.website ?? "",
+                      industry: lead.industry ?? "",
+                      job_title: lead.job_title ?? "",
+                    });
+                  }}
+                >
+                  Avbryt
+                </Button>
+              </div>
+            </CardContent>
+          ) : (
+            <CardContent className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <p className="text-xs text-wood-700">E-post</p>
+                <p className="text-ink">
+                  {lead.email ? (
+                    <a href={`mailto:${lead.email}`} className="hover:underline">
+                      {lead.email}
+                    </a>
+                  ) : (
+                    "–"
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-wood-700">Telefon</p>
+                <p className="text-ink">
+                  {lead.phone ? (
+                    <a href={`tel:${lead.phone}`} className="font-mono hover:underline">
+                      {lead.phone}
+                    </a>
+                  ) : (
+                    <span className="text-red-600">Mangler – klikk «Rediger»</span>
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-wood-700">Nettside</p>
+                <p className="truncate text-ink">
+                  {lead.website ? (
+                    <a
+                      href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:underline"
+                    >
+                      {lead.website}
+                    </a>
+                  ) : (
+                    "–"
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-wood-700">Bransje</p>
+                <p className="text-ink">{lead.industry ?? "–"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-wood-700">Tittel</p>
+                <p className="text-ink">{lead.job_title ?? "–"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-wood-700">Kilde</p>
+                <p className="text-ink">{lead.source}</p>
+              </div>
+              <div>
+                <p className="text-xs text-wood-700">Tildelt dato</p>
+                <p className="text-ink">{lead.assigned_date ?? "–"}</p>
+              </div>
+            </CardContent>
+          )}
         </Card>
 
         <Card>
