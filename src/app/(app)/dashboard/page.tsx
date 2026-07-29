@@ -68,6 +68,12 @@ export default async function DashboardPage() {
     ? Math.round((followedUp / progressPool.length) * 100)
     : 0;
 
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const newTodayCount = scopedLeads.filter(
+    (l) => new Date(l.created_at) >= startOfToday
+  ).length;
+
   const statusSegments = (Object.keys(LEAD_STATUS_LABELS) as LeadStatus[])
     .map((status) => ({
       label: LEAD_STATUS_LABELS[status],
@@ -98,12 +104,20 @@ export default async function DashboardPage() {
             : `Hei ${profile.full_name ?? profile.email}, her er status for pipelinen din.`}
         </p>
         {isAdmin ? (
-          <Link
-            href="/admin/leads"
-            className="inline-flex items-center gap-1.5 font-pixel text-[10px] uppercase tracking-wide text-forest-700 hover:text-forest-500"
-          >
-            Se alle leads <ArrowUpRight className="h-4 w-4" />
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/admin/leads?period=today"
+              className="inline-flex items-center gap-2 rounded-sm border-2 border-ink bg-gold-400 px-3 py-1.5 font-pixel text-[10px] uppercase tracking-wide text-ink shadow-[2px_2px_0_0_var(--color-ink)] transition-colors hover:bg-gold-300"
+            >
+              Nye i dag: {newTodayCount} <ArrowUpRight className="h-4 w-4" />
+            </Link>
+            <Link
+              href="/admin/leads"
+              className="inline-flex items-center gap-1.5 font-pixel text-[10px] uppercase tracking-wide text-forest-700 hover:text-forest-500"
+            >
+              Se alle leads <ArrowUpRight className="h-4 w-4" />
+            </Link>
+          </div>
         ) : (
           <div className="flex items-center gap-2">
             <span className="text-sm text-wood-800">Niche:</span>

@@ -13,12 +13,30 @@ import type { Lead, LeadStatus, Niche, Profile } from "@/lib/types";
 export default async function AdminLeadsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ niche?: string; status?: string; view?: string; q?: string }>;
+  searchParams: Promise<{
+    niche?: string;
+    status?: string;
+    view?: string;
+    q?: string;
+    period?: string;
+  }>;
 }) {
-  const { niche, status, view, q } = await searchParams;
+  const { niche, status, view, q, period } = await searchParams;
   const supabase = await createClient();
   const isMap = view === "map";
   const search = (q ?? "").trim().toLowerCase();
+
+  // Start of the selected period (local time), for the "new leads" filter.
+  let periodStart: string | null = null;
+  if (period === "today") {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    periodStart = d.toISOString();
+  } else if (period === "week") {
+    const d = new Date();
+    d.setDate(d.getDate() - 7);
+    periodStart = d.toISOString();
+  }
 
   const [{ data: niches }, { data: sellers }, { data: openLeads }] = await Promise.all([
     supabase.from("niches").select("*").order("name"),
@@ -49,6 +67,7 @@ export default async function AdminLeadsPage({
   if (niche === "unclassified") query = query.is("niche_id", null);
   else if (niche) query = query.eq("niche_id", niche);
   if (status) query = query.eq("status", status as LeadStatus);
+  if (periodStart) query = query.gte("created_at", periodStart);
 
   const { data: leadsRaw } = await query;
   const leads = search
@@ -64,7 +83,7 @@ export default async function AdminLeadsPage({
       <div className="flex flex-wrap items-center justify-end gap-3">
         <ViewToggle
           basePath="/admin/leads"
-          params={{ niche, status, q }}
+          params={{ niche, status, q, period }}
           active={isMap ? "map" : "list"}
         />
         <TriggerAssignmentButton />
@@ -109,6 +128,14 @@ export default async function AdminLeadsPage({
                     {label}
                   </option>
                 ))}
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-wood-700">Periode</label>
+              <Select name="period" defaultValue={period ?? ""} className="w-40">
+                <option value="">Hele tiden</option>
+                <option value="today">Nye i dag</option>
+                <option value="week">Siste 7 dager</option>
               </Select>
             </div>
             <Button type="submit" variant="outline">
