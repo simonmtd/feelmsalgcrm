@@ -158,6 +158,62 @@ export async function enrichPerson(
   };
 }
 
+/** Splits a full name into first/last for Apollo's match params. */
+export function splitName(name: string | null): { first: string | null; last: string | null } {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { first: null, last: null };
+  if (parts.length === 1) return { first: parts[0], last: null };
+  return { first: parts[0], last: parts.slice(1).join(" ") };
+}
+
+/** Strips a URL down to a bare domain (example.no) for Apollo's `domain` param. */
+export function toDomain(website: string | null): string | null {
+  if (!website) return null;
+  return (
+    website
+      .replace(/^https?:\/\//i, "")
+      .replace(/^www\./i, "")
+      .split(/[/?#]/)[0]
+      .trim() || null
+  );
+}
+
+/** The lead columns enrichment reads (to decide what's missing) and can fill. */
+export interface LeadEnrichSnapshot {
+  company_name: string | null;
+  email: string | null;
+  phone: string | null;
+  website: string | null;
+  industry: string | null;
+  job_title: string | null;
+}
+
+/**
+ * Builds a fill-if-missing update from an Apollo result: only sets columns the
+ * lead doesn't already have, so a seller's manual entry is never overwritten.
+ * Returns the update object plus human labels for what got filled.
+ */
+export function enrichmentUpdate(
+  lead: LeadEnrichSnapshot,
+  result: ApolloEnrichResult
+): { update: Record<string, string | null>; filled: string[] } {
+  const update: Record<string, string | null> = {};
+  const filled: string[] = [];
+  const maybe = (col: keyof LeadEnrichSnapshot, value: string | null, label: string) => {
+    if (!lead[col] && value) {
+      update[col] = value;
+      filled.push(label);
+    }
+  };
+  maybe("email", result.email, "e-post");
+  maybe("phone", result.phone, "telefon");
+  maybe("website", result.website, "nettside");
+  maybe("industry", result.industry, "bransje");
+  maybe("job_title", result.jobTitle, "tittel");
+  maybe("company_name", result.organizationName, "firma");
+  return { update, filled };
+}
+
 /**
  * Parses an Apollo phone-reveal webhook payload into (apolloPersonId, phone)
  * pairs. Apollo's exact shape has varied, so we look for people/contacts arrays

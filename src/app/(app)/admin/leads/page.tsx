@@ -4,6 +4,7 @@ import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { TriggerAssignmentButton } from "@/components/admin/trigger-assignment-button";
+import { EnrichBatchPanel } from "@/components/admin/enrich-batch-panel";
 import { BulkAssignLeadsTable } from "@/components/admin/bulk-assign-leads-table";
 import { LeadMap } from "@/components/leads/lead-map";
 import { ViewToggle } from "@/components/leads/view-toggle";
@@ -39,7 +40,13 @@ export default async function AdminLeadsPage({
     periodStart = d.toISOString();
   }
 
-  const [{ data: niches }, { data: sellers }, { data: openLeads }] = await Promise.all([
+  const [
+    { data: niches },
+    { data: sellers },
+    { data: openLeads },
+    { count: missingAll },
+    { count: missingAssigned },
+  ] = await Promise.all([
     supabase.from("niches").select("*").order("name"),
     supabase
       .from("profiles")
@@ -52,6 +59,18 @@ export default async function AdminLeadsPage({
       .select("assigned_to")
       .not("assigned_to", "is", null)
       .not("status", "in", '("won","lost")'),
+    // Leads missing a phone number (needs a name to enrich), for the batch panel.
+    supabase
+      .from("leads")
+      .select("id", { count: "exact", head: true })
+      .is("phone", null)
+      .not("contact_name", "is", null),
+    supabase
+      .from("leads")
+      .select("id", { count: "exact", head: true })
+      .is("phone", null)
+      .not("contact_name", "is", null)
+      .not("assigned_to", "is", null),
   ]);
 
   const workload: Record<string, number> = {};
@@ -90,6 +109,11 @@ export default async function AdminLeadsPage({
         />
         <TriggerAssignmentButton />
       </div>
+
+      <EnrichBatchPanel
+        missingAll={missingAll ?? 0}
+        missingAssigned={missingAssigned ?? 0}
+      />
 
       <Card>
         <CardContent className="pt-5">

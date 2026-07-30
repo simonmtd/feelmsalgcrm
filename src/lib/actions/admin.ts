@@ -8,6 +8,14 @@ import { logAudit } from "@/lib/audit";
 import { notify } from "@/lib/notifications";
 import { runHubspotSync } from "@/lib/jobs/sync-hubspot";
 import { runDailyAssignment } from "@/lib/jobs/assign-daily-leads";
+import {
+  enrichPerson,
+  splitName,
+  toDomain,
+  enrichmentUpdate,
+  type LeadEnrichSnapshot,
+} from "@/lib/apollo";
+import { ENRICH_BATCH_MAX } from "@/lib/enrichment";
 
 export interface FormActionState {
   error?: string;
@@ -296,4 +304,104 @@ export async function triggerDailyAssignment() {
   await logAudit(actor, "assignment.trigger", { details: { assigned } });
   revalidatePath("/admin/leads");
   return result;
+}
+
+export interface EnrichBatchResult {
+  ok: boolean;
+  processed: number;
+  phonePending: number;
+  filled: Record<string, number>;
+  message: string;
+}
+
+/**
+ * Admin bulk enrichment: fills contact info on up to ENRICH_BATCH_MAX leads that
+ * are missing a phone number, via Apollo. `scope` "assigned" only touches leads
+ * already handed to a seller (so credits aren't spent on the backlog nobody is
+ * working); "all" prioritises assigned leads first. Fill-if-missing, so manual
+ * entries are never overwritten. Phone numbers arrive shortly after via the
+ * phone webhook. Each processed lead can cost ~8 Apollo credits.
+ */
+export async function enrichLeadsBatch(input: {
+  scope: "all" | "assigned";
+  limit: number;
+}): Promise<EnrichBatchResult> {
+  const actor = await requireAdmin();
+  const scope = input.scope === "assigned" ? "assigned" : "all";
+  const limit = Math.max(1, Math.min(ENRICH_BATCH_MAX, Math.floor(input.limit) || 0));
+
+  const admin = createAdminClient();
+  type BatchRow = LeadEnrichSnapshot & { id: string; contact_name: string | null };
+
+  // Two independent, fully-chained queries (rather than reassigning or unioning
+  // builders, which trips TS2589). Both fetch leads missing a phone that still
+  // have a name to match on; "assigned" additionally requires a seller.
+  // assigned_to desc prioritises worked leads first even in "all" scope.
+  let rows: BatchRow[];
+  if (scope === "assigned") {
+    const { data, error } = await admin
+      .from("leads")
+      .select("*")
+      .is("phone", null)
+      .not("contact_name", "is", null)
+      .not("assigned_to", "is", null)
+      .order("assigned_to", { ascending: false, nullsFirst: false })
+      .limit(limit);
+    if (error) throwSafe("enrichLeadsBatch", error);
+    rows = (data ?? []) as BatchRow[];
+  } else {
+    const { data, error } = await admin
+      .from("leads")
+      .select("*")
+      .is("phone", null)
+      .not("contact_name", "is", null)
+      .order("assigned_to", { ascending: false, nullsFirst: false })
+      .limit(limit);
+    if (error) throwSafe("enrichLeadsBatch", error);
+    rows = (data ?? []) as BatchRow[];
+  }
+  let processed = 0;
+  let phonePending = 0;
+  const filled: Record<string, number> = {};
+
+  for (const lead of rows) {
+    try {
+      const { first, last } = splitName(lead.contact_name);
+      const result = await enrichPerson({
+        firstName: first,
+        lastName: last,
+        organizationName: lead.company_name,
+        domain: toDomain(lead.website),
+        email: lead.email,
+      });
+      const { update, filled: fills } = enrichmentUpdate(lead, result);
+      update.apollo_person_id = result.apolloPersonId;
+      update.enriched_at = new Date().toISOString();
+      await admin.from("leads").update(update).eq("id", lead.id);
+      processed++;
+      if (result.phonePending) phonePending++;
+      for (const f of fills) filled[f] = (filled[f] ?? 0) + 1;
+    } catch (err) {
+      // One bad lead shouldn't abort the whole batch.
+      console.error("[enrichLeadsBatch] lead failed", lead.id, err);
+    }
+  }
+
+  await logAudit(actor, "leads.enrich_batch", {
+    details: { scope, limit, processed, phonePending },
+  });
+
+  revalidatePath("/admin/leads");
+  revalidatePath("/leads");
+  revalidatePath("/today");
+
+  const parts = Object.entries(filled).map(([k, v]) => `${v} ${k}`);
+  const message =
+    processed === 0
+      ? "Fant ingen leads uten telefon å berike."
+      : `Beriket ${processed} leads.${parts.length ? " Fylte: " + parts.join(", ") + "." : ""}${
+          phonePending ? ` Telefon hentes for ${phonePending} (dukker opp om litt).` : ""
+        }`;
+
+  return { ok: true, processed, phonePending, filled, message };
 }

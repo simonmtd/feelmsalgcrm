@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireProfile } from "@/lib/dal";
 import { throwSafe, safeError } from "@/lib/actions/errors";
-import { enrichPerson } from "@/lib/apollo";
+import { enrichPerson, splitName, toDomain, enrichmentUpdate } from "@/lib/apollo";
 import {
   LEAD_STATUS_LABELS,
   FILMING_STATUS_LABELS,
@@ -188,25 +188,6 @@ export async function updateLeadContact(leadId: string, fields: LeadContactField
   revalidatePath("/today");
 }
 
-function splitName(name: string | null): { first: string | null; last: string | null } {
-  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return { first: null, last: null };
-  if (parts.length === 1) return { first: parts[0], last: null };
-  return { first: parts[0], last: parts.slice(1).join(" ") };
-}
-
-/** Strips a URL down to a bare domain (example.no) for Apollo's `domain` param. */
-function toDomain(website: string | null): string | null {
-  if (!website) return null;
-  return (
-    website
-      .replace(/^https?:\/\//i, "")
-      .replace(/^www\./i, "")
-      .split(/[/?#]/)[0]
-      .trim() || null
-  );
-}
-
 export interface EnrichResult {
   ok: boolean;
   filled: string[];
@@ -253,23 +234,9 @@ export async function enrichLead(leadId: string): Promise<EnrichResult> {
   }
 
   // Fill-if-missing: only set a column the lead doesn't already have.
-  const update: Record<string, string | null> = {
-    apollo_person_id: result.apolloPersonId,
-    enriched_at: new Date().toISOString(),
-  };
-  const filled: string[] = [];
-  const maybe = (col: keyof typeof lead, value: string | null, label: string) => {
-    if (!lead[col] && value) {
-      update[col] = value;
-      filled.push(label);
-    }
-  };
-  maybe("email", result.email, "e-post");
-  maybe("phone", result.phone, "telefon");
-  maybe("website", result.website, "nettside");
-  maybe("industry", result.industry, "bransje");
-  maybe("job_title", result.jobTitle, "tittel");
-  maybe("company_name", result.organizationName, "firma");
+  const { update, filled } = enrichmentUpdate(lead, result);
+  update.apollo_person_id = result.apolloPersonId;
+  update.enriched_at = new Date().toISOString();
 
   const admin = createAdminClient();
   const { error } = await admin.from("leads").update(update).eq("id", leadId);
