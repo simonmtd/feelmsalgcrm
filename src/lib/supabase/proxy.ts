@@ -11,7 +11,11 @@ import { DEMO_MOCK, DEMO_COOKIE } from "@/lib/demo/mode";
 export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isAuthRoute = path.startsWith("/login");
-  const isCronRoute = path.startsWith("/api/cron");
+  // Public, secret-authenticated API routes must bypass the login redirect:
+  // cron jobs and the Apollo phone-reveal webhook are called by external
+  // services with no session cookie, and each guards itself with CRON_SECRET.
+  const isPublicApi =
+    path.startsWith("/api/cron") || path.startsWith("/api/apollo");
 
   if (DEMO_MOCK) {
     // The proxy runs in a separate runtime from the server components, so it
@@ -22,7 +26,7 @@ export async function updateSession(request: NextRequest) {
     // mere cookie presence caused an infinite redirect loop whenever a restart
     // reseeded the store and invalidated an old cookie.
     const uid = request.cookies.get(DEMO_COOKIE)?.value;
-    if (!uid && !isAuthRoute && !isCronRoute) {
+    if (!uid && !isAuthRoute && !isPublicApi) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       return NextResponse.redirect(url);
@@ -57,7 +61,7 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user && !isAuthRoute && !isCronRoute) {
+  if (!user && !isAuthRoute && !isPublicApi) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
