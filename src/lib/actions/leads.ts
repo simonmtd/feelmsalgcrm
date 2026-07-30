@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireProfile } from "@/lib/dal";
-import { throwSafe } from "@/lib/actions/errors";
+import { throwSafe, safeError } from "@/lib/actions/errors";
+import { enrichPerson } from "@/lib/apollo";
 import {
   LEAD_STATUS_LABELS,
   FILMING_STATUS_LABELS,
@@ -185,6 +186,105 @@ export async function updateLeadContact(leadId: string, fields: LeadContactField
   revalidatePath(`/leads/${leadId}`);
   revalidatePath("/leads");
   revalidatePath("/today");
+}
+
+function splitName(name: string | null): { first: string | null; last: string | null } {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { first: null, last: null };
+  if (parts.length === 1) return { first: parts[0], last: null };
+  return { first: parts[0], last: parts.slice(1).join(" ") };
+}
+
+/** Strips a URL down to a bare domain (example.no) for Apollo's `domain` param. */
+function toDomain(website: string | null): string | null {
+  if (!website) return null;
+  return (
+    website
+      .replace(/^https?:\/\//i, "")
+      .replace(/^www\./i, "")
+      .split(/[/?#]/)[0]
+      .trim() || null
+  );
+}
+
+export interface EnrichResult {
+  ok: boolean;
+  filled: string[];
+  phonePending: boolean;
+  found: boolean;
+  message: string;
+}
+
+/**
+ * Fills a lead's missing contact info from Apollo (name + company lookup). Only
+ * writes fields that are currently empty, so it never overwrites a seller's
+ * manual entry. Consumes an Apollo credit, so it runs on demand from the lead
+ * page. Mobile numbers may arrive shortly after via the phone webhook.
+ */
+export async function enrichLead(leadId: string): Promise<EnrichResult> {
+  const { supabase } = await assertOwnsLead(leadId);
+
+  const { data: lead, error: fetchErr } = await supabase
+    .from("leads")
+    .select("company_name, contact_name, email, phone, website, industry, job_title")
+    .eq("id", leadId)
+    .single();
+  if (fetchErr || !lead) throw new Error("Fant ikke lead.");
+
+  const { first, last } = splitName(lead.contact_name);
+
+  let result;
+  try {
+    result = await enrichPerson({
+      firstName: first,
+      lastName: last,
+      organizationName: lead.company_name,
+      domain: toDomain(lead.website),
+      email: lead.email,
+    });
+  } catch (err) {
+    return {
+      ok: false,
+      filled: [],
+      phonePending: false,
+      found: false,
+      message: safeError("enrichLead", err),
+    };
+  }
+
+  // Fill-if-missing: only set a column the lead doesn't already have.
+  const update: Record<string, string | null> = {
+    apollo_person_id: result.apolloPersonId,
+    enriched_at: new Date().toISOString(),
+  };
+  const filled: string[] = [];
+  const maybe = (col: keyof typeof lead, value: string | null, label: string) => {
+    if (!lead[col] && value) {
+      update[col] = value;
+      filled.push(label);
+    }
+  };
+  maybe("email", result.email, "e-post");
+  maybe("phone", result.phone, "telefon");
+  maybe("website", result.website, "nettside");
+  maybe("industry", result.industry, "bransje");
+  maybe("job_title", result.jobTitle, "tittel");
+  maybe("company_name", result.organizationName, "firma");
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("leads").update(update).eq("id", leadId);
+  if (error) throwSafe("enrichLead", error);
+
+  const found = filled.length > 0 || result.phonePending;
+  const message = !found
+    ? "Apollo fant ingen ny informasjon."
+    : `Fant: ${filled.join(", ") || "–"}${result.phonePending ? " (telefon hentes …)" : ""}.`;
+
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/leads");
+  revalidatePath("/today");
+
+  return { ok: true, filled, phonePending: result.phonePending, found, message };
 }
 
 export async function addLeadActivity(

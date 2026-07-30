@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, Sparkles } from "lucide-react";
 import {
   updateLeadStatus,
   updateLeadFilmingStatus,
   updateLeadDetails,
   updateLeadContact,
+  enrichLead,
   addLeadActivity,
 } from "@/lib/actions/leads";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,6 +42,8 @@ export function LeadDetail({
   const [note, setNote] = useState("");
 
   const [editingContact, setEditingContact] = useState(false);
+  const [enrichMsg, setEnrichMsg] = useState<string | null>(null);
+  const [enriching, startEnrich] = useTransition();
   const [contact, setContact] = useState({
     company_name: lead.company_name ?? "",
     contact_name: lead.contact_name ?? "",
@@ -55,6 +58,14 @@ export function LeadDetail({
     startTransition(async () => {
       await updateLeadContact(lead.id, contact);
       setEditingContact(false);
+    });
+  }
+
+  function runEnrich() {
+    setEnrichMsg(null);
+    startEnrich(async () => {
+      const res = await enrichLead(lead.id);
+      setEnrichMsg(res.message);
     });
   }
 
@@ -73,17 +84,33 @@ export function LeadDetail({
               <div className="flex shrink-0 items-center gap-2">
                 {lead.niche && <Badge>{lead.niche.name}</Badge>}
                 {!editingContact && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setEditingContact(true)}
-                  >
-                    <Pencil className="h-3.5 w-3.5" /> Rediger
-                  </Button>
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={enriching}
+                      onClick={runEnrich}
+                      title="Hent manglende tlf/e-post fra Apollo"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      {enriching ? "Beriker…" : "Berik"}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setEditingContact(true)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" /> Rediger
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
+            {enrichMsg && (
+              <p className="mt-2 text-xs text-forest-700">{enrichMsg}</p>
+            )}
           </CardHeader>
           {editingContact ? (
             <CardContent className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
