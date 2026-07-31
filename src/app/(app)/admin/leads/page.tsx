@@ -108,7 +108,7 @@ export default async function AdminLeadsPage({
           params={{ niche, status, q, period, quality }}
           active={isMap ? "map" : "list"}
         />
-        <FetchApolloButton />
+        <FetchApolloButton niches={(niches as Niche[] | null) ?? []} />
         <TriggerAssignmentButton />
       </div>
 

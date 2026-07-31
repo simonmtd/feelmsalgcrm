@@ -192,6 +192,9 @@ export async function searchApolloPeople(input: {
   locations: string[];
   page: number;
   perPage?: number;
+  /** Free-text industry/company keyword (Apollo q_keywords) to narrow the
+   *  search, e.g. "eiendom". Norwegian terms work well. */
+  keywords?: string;
 }): Promise<{ people: ApolloProspect[] }> {
   if (DEMO_MOCK) {
     const { searchDemoApolloPeople } = await import("@/lib/demo/apollo");
@@ -199,6 +202,14 @@ export async function searchApolloPeople(input: {
   }
 
   const key = requireKey();
+  const body: Record<string, unknown> = {
+    person_titles: input.titles,
+    person_locations: input.locations,
+    page: input.page,
+    per_page: input.perPage ?? 25,
+  };
+  if (input.keywords?.trim()) body.q_keywords = input.keywords.trim();
+
   const res = await fetch(`${APOLLO_BASE}/mixed_people/api_search`, {
     method: "POST",
     headers: {
@@ -207,12 +218,7 @@ export async function searchApolloPeople(input: {
       "X-Api-Key": key,
     },
     cache: "no-store",
-    body: JSON.stringify({
-      person_titles: input.titles,
-      person_locations: input.locations,
-      page: input.page,
-      per_page: input.perPage ?? 25,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {

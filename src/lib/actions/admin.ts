@@ -431,6 +431,21 @@ export async function enrichLeadsBatch(input: {
   return { ok: true, processed, phonePending, filled, message };
 }
 
+/**
+ * Turns a niche name into a single strong search keyword for Apollo's
+ * q_keywords. A multi-word phrase ("Bygg & Anlegg") over-narrows, so we drop
+ * filler words (og, &, i, på) and short tokens and take the first meaningful
+ * one ("bygg"). Falls back to the whole lowercased name.
+ */
+function industryKeyword(name: string): string {
+  const STOP = new Set(["og", "i", "på", "for", "med", "til", "av"]);
+  const words = name
+    .toLowerCase()
+    .split(/[^a-zæøå0-9]+/i)
+    .filter((w) => w.length >= 3 && !STOP.has(w));
+  return words[0] ?? name.toLowerCase().trim();
+}
+
 export interface ApolloFetchActionResult {
   ok: boolean;
   imported: number;
@@ -443,14 +458,38 @@ export interface ApolloFetchActionResult {
  * ICP-matched prospects into the pool (deduped, auto-classified). Contact info
  * stays masked until enriched — import itself spends no reveal credits.
  */
-export async function fetchApolloLeads(count = 25): Promise<ApolloFetchActionResult> {
+export async function fetchApolloLeads(
+  count = 25,
+  nicheId?: string | null
+): Promise<ApolloFetchActionResult> {
   const actor = await requireAdmin();
   const limit = Math.max(1, Math.min(100, Math.floor(count) || 0));
 
-  const result = await runApolloLeadFetch(limit);
+  // If a bransje was chosen, look it up and search Apollo for that keyword,
+  // tagging every import with that niche.
+  let keywords: string | undefined;
+  let validNicheId: string | null = null;
+  if (nicheId) {
+    const admin = createAdminClient();
+    const { data: niche } = await admin
+      .from("niches")
+      .select("id, name")
+      .eq("id", nicheId)
+      .maybeSingle();
+    if (niche) {
+      validNicheId = niche.id as string;
+      keywords = industryKeyword(String(niche.name));
+    }
+  }
+
+  const result = await runApolloLeadFetch(limit, { keywords, nicheId: validNicheId });
 
   await logAudit(actor, "leads.apollo_fetch", {
-    details: { imported: result.imported, autoClassified: result.autoClassified },
+    details: {
+      imported: result.imported,
+      autoClassified: result.autoClassified,
+      nicheId: validNicheId,
+    },
   });
   revalidatePath("/admin/leads");
   revalidatePath("/dashboard");

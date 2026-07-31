@@ -50,7 +50,8 @@ const PER_PAGE = 25;
  * assignment job can distribute them.
  */
 export async function runApolloLeadFetch(
-  limit = 25
+  limit = 25,
+  opts: { keywords?: string; nicheId?: string | null } = {}
 ): Promise<ApolloFetchResult> {
   if (!process.env.APOLLO_API_KEY && process.env.DEMO_MOCK !== "1") {
     return { ok: false, imported: 0, autoClassified: 0, scanned: 0, error: "APOLLO_API_KEY mangler." };
@@ -82,6 +83,7 @@ export async function runApolloLeadFetch(
         locations: ICP_LOCATIONS,
         page,
         perPage: PER_PAGE,
+        keywords: opts.keywords,
       });
       if (people.length === 0) break; // no more results
       scanned += people.length;
@@ -93,19 +95,24 @@ export async function runApolloLeadFetch(
         if (!p.hasEmail && !p.hasPhone) continue; // skip unreachable prospects
         seen.add(p.apolloId);
 
-        const niche = matchNiche(niches, {
-          company: p.companyName,
-          industry: null,
-          website: null,
-          title: p.jobTitle,
-        });
-        if (niche) autoClassified++;
+        // When the admin picked a specific bransje we searched for it directly,
+        // so tag every import with that niche. Otherwise best-effort match.
+        const nicheId =
+          opts.nicheId ??
+          matchNiche(niches, {
+            company: p.companyName,
+            industry: null,
+            website: null,
+            title: p.jobTitle,
+          })?.id ??
+          null;
+        if (nicheId) autoClassified++;
 
         rows.push({
           apollo_person_id: p.apolloId,
           company_name: p.companyName,
           job_title: p.jobTitle,
-          niche_id: niche?.id ?? null,
+          niche_id: nicheId,
           source: "apollo",
           status: "new",
         });
