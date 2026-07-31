@@ -4,6 +4,7 @@ import { requireProfile } from "@/lib/dal";
 import { createClient } from "@/lib/supabase/server";
 import { NicheSwitcher } from "@/components/niche-switcher";
 import { RecentLeadRow } from "@/components/dashboard/recent-lead-row";
+import { Leaderboard, type LeaderboardRow } from "@/components/dashboard/leaderboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/charts/stat-card";
 import { TrendBarChart } from "@/components/charts/trend-bar-chart";
@@ -12,7 +13,7 @@ import { PixelProgress } from "@/components/charts/pixel-progress";
 import { computeLeadStats, weekPoints, monthPoints, yearPoints } from "@/lib/dashboard-stats";
 import { formatCurrency } from "@/lib/utils";
 import { LEAD_STATUS_LABELS } from "@/lib/types";
-import type { Lead, LeadStatus } from "@/lib/types";
+import type { Lead, LeadStatus, Profile } from "@/lib/types";
 
 const STATUS_COLORS: Record<LeadStatus, string> = {
   new: "#9ED9F0",
@@ -32,6 +33,38 @@ export default async function DashboardPage() {
   const isAdmin = profile.role === "admin";
 
   const { data: niches } = await supabase.from("niches").select("*").order("name");
+
+  // Team leaderboard: meetings booked + signed value per seller. Everyone can
+  // see it (meetings are team-visible), so it renders for admins and sellers.
+  const [{ data: allMeetings }, { data: sellerRows }] = await Promise.all([
+    supabase.from("meetings").select("seller_id, deal_size, signed, type"),
+    supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .eq("is_active", true)
+      .eq("role", "seller"),
+  ]);
+  const meetingRows =
+    (allMeetings as { seller_id: string; deal_size: number | null; signed: boolean; type: string }[] | null) ?? [];
+  const leaderboard: LeaderboardRow[] = (
+    (sellerRows as Pick<Profile, "id" | "full_name" | "email">[] | null) ?? []
+  )
+    .map((s) => {
+      const mine = meetingRows.filter((m) => m.seller_id === s.id);
+      return {
+        id: s.id,
+        name: s.full_name ?? s.email,
+        meetings: mine.filter((m) => m.type !== "internal").length,
+        signedCount: mine.filter((m) => m.signed).length,
+        signedSum: mine.filter((m) => m.signed).reduce((sum, m) => sum + (m.deal_size ?? 0), 0),
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.signedSum - a.signedSum ||
+        b.signedCount - a.signedCount ||
+        b.meetings - a.meetings
+    );
 
   let scopedLeads: Lead[];
   let recentLeads: Lead[];
@@ -202,6 +235,8 @@ export default async function DashboardPage() {
           }
         />
       </div>
+
+      <Leaderboard rows={leaderboard} />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">

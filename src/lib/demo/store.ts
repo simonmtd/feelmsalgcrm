@@ -347,6 +347,7 @@ function buildSeed(): DemoStore {
     lead?: Lead;
     dealSize?: number;
     product?: ProductType;
+    signed?: boolean;
   }): Meeting {
     return {
       id: crypto.randomUUID(),
@@ -360,6 +361,8 @@ function buildSeed(): DemoStore {
       notes: null,
       deal_size: spec.dealSize ?? null,
       product_type: spec.product ?? null,
+      signed: spec.signed ?? false,
+      signed_at: null,
       created_at: daysAgo(3),
     };
   }

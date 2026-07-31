@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition, useActionState } from "react";
-import { Plus, X, MapPin, Trash2, Building2 } from "lucide-react";
+import { Plus, X, MapPin, Trash2, Building2, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { createMeeting, deleteMeeting, type MeetingActionState } from "@/lib/actions/meetings";
+import {
+  createMeeting,
+  deleteMeeting,
+  setMeetingSigned,
+  type MeetingActionState,
+} from "@/lib/actions/meetings";
 import { formatCurrency, cn } from "@/lib/utils";
 import { MEETING_TYPE_LABELS, PRODUCT_TYPE_LABELS } from "@/lib/types";
 import type { Lead, Meeting, MeetingType, ProductType, Profile } from "@/lib/types";
@@ -38,12 +43,12 @@ function formatWhen(startsAt: string, endsAt: string) {
 
 function MeetingRow({
   meeting,
-  canDelete,
-  onDeleted,
+  canEdit,
+  onChanged,
 }: {
   meeting: Meeting;
-  canDelete: boolean;
-  onDeleted: () => void;
+  canEdit: boolean;
+  onChanged: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
 
@@ -93,8 +98,42 @@ function MeetingRow({
       <td className="py-3 pr-4 font-mono text-sm font-bold text-ink">
         {formatCurrency(meeting.deal_size)}
       </td>
+      <td className="py-3 pr-4">
+        {meeting.signed ? (
+          <button
+            type="button"
+            disabled={isPending || !canEdit}
+            onClick={() =>
+              startTransition(async () => {
+                await setMeetingSigned(meeting.id, false);
+                onChanged();
+              })
+            }
+            title={canEdit ? "Klikk for å angre signert" : "Signert"}
+            className="inline-flex items-center gap-1 rounded-sm border-2 border-ink bg-forest-500 px-2 py-1 text-xs font-bold text-parchment shadow-[2px_2px_0_0_var(--color-ink)] disabled:opacity-70"
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" /> Signert
+          </button>
+        ) : canEdit ? (
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() =>
+              startTransition(async () => {
+                await setMeetingSigned(meeting.id, true);
+                onChanged();
+              })
+            }
+            className="inline-flex items-center gap-1 rounded-sm border-2 border-ink bg-wood-100 px-2 py-1 text-xs text-wood-800 transition-colors hover:bg-gold-300 disabled:opacity-50"
+          >
+            Marker signert
+          </button>
+        ) : (
+          <span className="text-sm text-wood-600">–</span>
+        )}
+      </td>
       <td className="py-3">
-        {canDelete && (
+        {canEdit && (
           <button
             type="button"
             aria-label={`Slett møtet ${meeting.title}`}
@@ -102,7 +141,7 @@ function MeetingRow({
             onClick={() =>
               startTransition(async () => {
                 await deleteMeeting(meeting.id);
-                onDeleted();
+                onChanged();
               })
             }
             className="rounded-sm border-2 border-transparent p-1 text-wood-600 transition-colors hover:border-ink hover:bg-red-400 hover:text-ink disabled:opacity-50"
@@ -359,6 +398,7 @@ export function MeetingsView({
                   <th className="py-2 pr-4">Type</th>
                   <th className="py-2 pr-4">Produkt</th>
                   <th className="py-2 pr-4">Deal size</th>
+                  <th className="py-2 pr-4">Signert</th>
                   <th className="py-2" />
                 </tr>
               </thead>
@@ -367,8 +407,8 @@ export function MeetingsView({
                   <MeetingRow
                     key={meeting.id}
                     meeting={meeting}
-                    canDelete={profile.role === "admin" || meeting.seller_id === profile.id}
-                    onDeleted={refresh}
+                    canEdit={profile.role === "admin" || meeting.seller_id === profile.id}
+                    onChanged={refresh}
                   />
                 ))}
               </tbody>
@@ -395,6 +435,7 @@ export function MeetingsView({
                   <th className="py-2 pr-4">Type</th>
                   <th className="py-2 pr-4">Produkt</th>
                   <th className="py-2 pr-4">Deal size</th>
+                  <th className="py-2 pr-4">Signert</th>
                   <th className="py-2" />
                 </tr>
               </thead>
@@ -403,8 +444,8 @@ export function MeetingsView({
                   <MeetingRow
                     key={meeting.id}
                     meeting={meeting}
-                    canDelete={profile.role === "admin" || meeting.seller_id === profile.id}
-                    onDeleted={refresh}
+                    canEdit={profile.role === "admin" || meeting.seller_id === profile.id}
+                    onChanged={refresh}
                   />
                 ))}
               </tbody>

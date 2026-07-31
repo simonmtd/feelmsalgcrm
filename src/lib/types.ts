@@ -149,6 +149,8 @@ export interface Meeting {
   notes: string | null;
   deal_size: number | null;
   product_type: ProductType | null;
+  signed: boolean;
+  signed_at: string | null;
   created_at: string;
   seller?: Pick<Profile, "id" | "full_name" | "email"> | null;
   lead?: Pick<Lead, "id" | "company_name" | "contact_name"> | null;

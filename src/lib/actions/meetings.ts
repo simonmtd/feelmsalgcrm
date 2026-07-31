@@ -18,6 +18,35 @@ export interface MeetingActionState {
 function revalidateMeetingViews() {
   revalidatePath("/calendar");
   revalidatePath("/meetings");
+  revalidatePath("/dashboard");
+}
+
+/**
+ * Marks a meeting's deal as signed (or not). A seller can do this for their own
+ * meetings, an admin for anyone's. Feeds the dashboard leaderboard.
+ */
+export async function setMeetingSigned(meetingId: string, signed: boolean) {
+  const profile = await requireProfile();
+  const supabase = await createClient();
+
+  const { data: meeting } = await supabase
+    .from("meetings")
+    .select("id, seller_id")
+    .eq("id", meetingId)
+    .single();
+
+  if (!meeting) throw new Error("Fant ikke møtet.");
+  if (profile.role !== "admin" && meeting.seller_id !== profile.id) {
+    throw new Error("Du kan bare endre dine egne møter.");
+  }
+
+  const { error } = await supabase
+    .from("meetings")
+    .update({ signed, signed_at: signed ? new Date().toISOString() : null })
+    .eq("id", meetingId);
+  if (error) throwSafe("setMeetingSigned", error);
+
+  revalidateMeetingViews();
 }
 
 export async function createMeeting(

@@ -73,6 +73,8 @@ function defaultsFor(table: TableName): Row {
         type: "sales_meeting",
         deal_size: null,
         product_type: null,
+        signed: false,
+        signed_at: null,
       };
     case "notifications":
       return { read_at: null, lead_id: null, type: "lead_assigned" };
