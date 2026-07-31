@@ -17,6 +17,8 @@ export interface ApolloEnrichInput {
 export interface ApolloEnrichResult {
   /** Apollo's stable person id, stored so the phone webhook can find the lead. */
   apolloPersonId: string | null;
+  /** Full person name (revealed) — Apollo-imported leads have no name until now. */
+  name: string | null;
   email: string | null;
   /** Synchronously returned phone, if any. Mobile numbers usually arrive later
    *  via the webhook instead, in which case this is null and phonePending true. */
@@ -37,6 +39,9 @@ interface ApolloPhoneNumber {
 
 interface ApolloPerson {
   id?: string;
+  name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
   email?: string | null;
   title?: string | null;
   phone_numbers?: ApolloPhoneNumber[];
@@ -138,6 +143,7 @@ export async function enrichPerson(
   if (!person) {
     return {
       apolloPersonId: null,
+      name: null,
       email: null,
       phone: null,
       phonePending: false,
@@ -149,8 +155,12 @@ export async function enrichPerson(
   }
 
   const phone = firstPhone(person);
+  const fullName =
+    person.name ??
+    ([person.first_name, person.last_name].filter(Boolean).join(" ") || null);
   return {
     apolloPersonId: person.id ?? null,
+    name: fullName || null,
     email: person.email ?? person.personal_emails?.[0] ?? null,
     phone,
     // We asked for a reveal (webhookUrl set) but got nothing back synchronously:
@@ -265,6 +275,7 @@ export function toDomain(website: string | null): string | null {
 /** The lead columns enrichment reads (to decide what's missing) and can fill. */
 export interface LeadEnrichSnapshot {
   company_name: string | null;
+  contact_name: string | null;
   email: string | null;
   phone: string | null;
   website: string | null;
@@ -289,6 +300,7 @@ export function enrichmentUpdate(
       filled.push(label);
     }
   };
+  maybe("contact_name", result.name, "navn");
   maybe("email", result.email, "e-post");
   maybe("phone", result.phone, "telefon");
   maybe("website", result.website, "nettside");

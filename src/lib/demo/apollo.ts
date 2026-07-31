@@ -17,6 +17,8 @@ export function enrichDemoPerson(input: ApolloEnrichInput): ApolloEnrichResult {
   const digits = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10)).join("");
   return {
     apolloPersonId: `demo-${slug}`,
+    name:
+      [input.firstName, input.lastName].filter(Boolean).join(" ") || "Demo Kontakt",
     email: input.email ?? `${first || "kontakt"}@${slug}.no`,
     phone: `+47 ${digits.slice(0, 3)} ${digits.slice(3, 5)} ${digits.slice(5)}`,
     phonePending: false,
