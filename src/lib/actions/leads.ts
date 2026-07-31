@@ -7,6 +7,7 @@ import { requireProfile } from "@/lib/dal";
 import { throwSafe, safeError } from "@/lib/actions/errors";
 import { enrichPerson, splitName, toDomain, enrichmentUpdate } from "@/lib/apollo";
 import { matchNiche } from "@/lib/niche-matcher";
+import { normEmail } from "@/lib/dedup";
 import type { Niche } from "@/lib/types";
 import {
   LEAD_STATUS_LABELS,
@@ -329,17 +330,52 @@ export async function enrichLead(leadId: string): Promise<EnrichResult> {
   }
 
   const admin = createAdminClient();
+
+  // Cross-source dedup: if enrichment just revealed an email that another lead
+  // already has, this (newly-emailed, usually Apollo-sourced) lead is the
+  // duplicate — flag it and drop it out of the pipeline so no one double-works
+  // the same person.
+  let duplicateNote: string | null = null;
+  const newEmail = normEmail(update.email as string | undefined);
+  if (newEmail) {
+    const { data: dup } = await admin
+      .from("leads")
+      .select("id, company_name")
+      .neq("id", leadId)
+      .ilike("email", newEmail)
+      .is("duplicate_of", null)
+      .limit(1)
+      .maybeSingle();
+    if (dup) {
+      update.status = "lost";
+      update.duplicate_of = dup.id;
+      duplicateNote = `Duplikat av eksisterende lead (${dup.company_name ?? "kjent kunde"}).`;
+    }
+  }
+
   const { error } = await admin.from("leads").update(update).eq("id", leadId);
   if (error) throwSafe("enrichLead", error);
 
+  if (duplicateNote) {
+    await admin.from("lead_activities").insert({
+      lead_id: leadId,
+      seller_id: null,
+      type: "note" as ActivityType,
+      content: `${duplicateNote} Markert som tapt automatisk.`,
+    });
+  }
+
   const found = filled.length > 0 || result.phonePending;
-  const message = !found
-    ? "Apollo fant ingen ny informasjon."
-    : `Fant: ${filled.join(", ") || "–"}${result.phonePending ? " (telefon hentes …)" : ""}.`;
+  const message = duplicateNote
+    ? `⚠️ ${duplicateNote} Markert tapt.`
+    : !found
+      ? "Apollo fant ingen ny informasjon."
+      : `Fant: ${filled.join(", ") || "–"}${result.phonePending ? " (telefon hentes …)" : ""}.`;
 
   revalidatePath(`/leads/${leadId}`);
   revalidatePath("/leads");
   revalidatePath("/today");
+  revalidatePath("/dashboard");
 
   return { ok: true, filled, phonePending: result.phonePending, found, message };
 }

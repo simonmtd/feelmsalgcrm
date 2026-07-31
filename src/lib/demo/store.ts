@@ -168,6 +168,7 @@ function buildSeed(): DemoStore {
       apollo_person_id: null,
       enriched_at: null,
       org_number: null,
+      duplicate_of: null,
       raw_hubspot_data: null,
       created_at: createdAt,
       updated_at: createdAt,

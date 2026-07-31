@@ -52,6 +52,7 @@ function defaultsFor(table: TableName): Row {
         apollo_person_id: null,
         enriched_at: null,
         org_number: null,
+        duplicate_of: null,
         deal_size: null,
         website: null,
         industry: null,

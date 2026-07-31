@@ -81,7 +81,14 @@ export function LeadDetail({
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
+    <div className="flex flex-col gap-6">
+      {lead.duplicate_of && (
+        <div className="rounded-sm border-2 border-red-600 bg-red-50 p-3 text-sm font-medium text-red-700 shadow-[3px_3px_0_0_var(--color-ink)]">
+          ⚠️ Dette er et duplikat av et eksisterende lead — samme person finnes fra
+          en annen kilde. Ikke ring denne.
+        </div>
+      )}
+      <div className="grid gap-6 lg:grid-cols-3">
       <div className="flex flex-col gap-6 lg:col-span-2">
         <Card>
           <CardHeader>
@@ -467,6 +474,7 @@ export function LeadDetail({
             </div>
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );

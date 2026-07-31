@@ -2,6 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { searchApolloPeople } from "@/lib/apollo";
 import { verifyNorwegianCompany, type BrregMatch } from "@/lib/brreg";
+import { companyTitleKey } from "@/lib/dedup";
 import { matchNiche } from "@/lib/niche-matcher";
 import type { Niche } from "@/lib/types";
 
@@ -12,6 +13,8 @@ export interface ApolloFetchResult {
   scanned: number;
   /** Candidates dropped because they aren't verified Norwegian companies. */
   rejectedForeign: number;
+  /** Candidates dropped as duplicates of a lead we already have (any source). */
+  rejectedDuplicate: number;
   error?: string;
 }
 
@@ -61,7 +64,7 @@ export async function runApolloLeadFetch(
   opts: { keywords?: string; nicheId?: string | null } = {}
 ): Promise<ApolloFetchResult> {
   if (!process.env.APOLLO_API_KEY && process.env.DEMO_MOCK !== "1") {
-    return { ok: false, imported: 0, autoClassified: 0, scanned: 0, rejectedForeign: 0, error: "APOLLO_API_KEY mangler." };
+    return { ok: false, imported: 0, autoClassified: 0, scanned: 0, rejectedForeign: 0, rejectedDuplicate: 0, error: "APOLLO_API_KEY mangler." };
   }
 
   const supabase = createAdminClient();
@@ -70,19 +73,25 @@ export async function runApolloLeadFetch(
   const { data: nichesData } = await supabase.from("niches").select("*");
   const niches = (nichesData as Niche[] | null) ?? [];
 
-  // Existing Apollo ids, so we never import the same person twice.
+  // Existing leads: Apollo ids (so we never import the same person twice) and
+  // company+role signatures (so we don't re-import someone we already have from
+  // HubSpot or an earlier run, even though the Apollo search masks their name).
   const { data: existingData } = await supabase
     .from("leads")
-    .select("apollo_person_id")
-    .not("apollo_person_id", "is", null);
-  const seen = new Set(
-    ((existingData as { apollo_person_id: string }[] | null) ?? []).map((r) => r.apollo_person_id)
-  );
+    .select("apollo_person_id, company_name, job_title");
+  const seen = new Set<string>();
+  const sigSeen = new Set<string>();
+  for (const r of (existingData as { apollo_person_id: string | null; company_name: string | null; job_title: string | null }[] | null) ?? []) {
+    if (r.apollo_person_id) seen.add(r.apollo_person_id);
+    const sig = companyTitleKey(r.company_name, r.job_title);
+    if (sig) sigSeen.add(sig);
+  }
 
   let imported = 0;
   let autoClassified = 0;
   let scanned = 0;
   let rejectedForeign = 0;
+  let rejectedDuplicate = 0;
   // Cache brreg lookups within a run (many rows can share a company name).
   const brregCache = new Map<string, BrregMatch | null>();
 
@@ -116,6 +125,15 @@ export async function runApolloLeadFetch(
           rejectedForeign++;
           continue; // not a verified Norwegian company
         }
+
+        // Cross-source dedup: skip if we already have this role at this company
+        // (from HubSpot or a prior run). Prevents two sellers on the same person.
+        const sig = companyTitleKey(p.companyName, p.jobTitle);
+        if (sig && sigSeen.has(sig)) {
+          rejectedDuplicate++;
+          continue;
+        }
+        if (sig) sigSeen.add(sig);
 
         // When the admin picked a specific bransje we searched for it directly,
         // so tag every import with that niche. Otherwise best-effort match.
@@ -151,9 +169,9 @@ export async function runApolloLeadFetch(
       }
     }
 
-    return { ok: true, imported, autoClassified, scanned, rejectedForeign };
+    return { ok: true, imported, autoClassified, scanned, rejectedForeign, rejectedDuplicate };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return { ok: false, imported, autoClassified, scanned, rejectedForeign, error: message };
+    return { ok: false, imported, autoClassified, scanned, rejectedForeign, rejectedDuplicate, error: message };
   }
 }

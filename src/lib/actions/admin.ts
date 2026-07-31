@@ -18,6 +18,7 @@ import {
 } from "@/lib/apollo";
 import { ENRICH_BATCH_MAX } from "@/lib/enrichment";
 import { matchNiche } from "@/lib/niche-matcher";
+import { normEmail } from "@/lib/dedup";
 import type { Niche } from "@/lib/types";
 
 export interface FormActionState {
@@ -377,6 +378,7 @@ export async function enrichLeadsBatch(input: {
 
   let processed = 0;
   let phonePending = 0;
+  let duplicates = 0;
   const filled: Record<string, number> = {};
 
   for (const lead of rows) {
@@ -402,6 +404,23 @@ export async function enrichLeadsBatch(input: {
         });
         if (niche) update.niche_id = niche.id;
       }
+      // Cross-source dedup on a newly-revealed email.
+      const newEmail = normEmail(update.email as string | undefined);
+      if (newEmail) {
+        const { data: dup } = await admin
+          .from("leads")
+          .select("id")
+          .neq("id", lead.id)
+          .ilike("email", newEmail)
+          .is("duplicate_of", null)
+          .limit(1)
+          .maybeSingle();
+        if (dup) {
+          update.status = "lost";
+          update.duplicate_of = dup.id;
+          duplicates++;
+        }
+      }
       await admin.from("leads").update(update).eq("id", lead.id);
       processed++;
       if (result.phonePending) phonePending++;
@@ -426,7 +445,7 @@ export async function enrichLeadsBatch(input: {
       ? "Fant ingen leads uten telefon å berike."
       : `Beriket ${processed} leads.${parts.length ? " Fylte: " + parts.join(", ") + "." : ""}${
           phonePending ? ` Telefon hentes for ${phonePending} (dukker opp om litt).` : ""
-        }`;
+        }${duplicates ? ` ${duplicates} duplikat markert tapt.` : ""}`;
 
   return { ok: true, processed, phonePending, filled, message };
 }
@@ -494,9 +513,11 @@ export async function fetchApolloLeads(
   revalidatePath("/admin/leads");
   revalidatePath("/dashboard");
 
-  const foreignNote = result.rejectedForeign
-    ? ` (${result.rejectedForeign} ikke-norske filtrert bort)`
-    : "";
+  const filteredParts = [
+    result.rejectedForeign ? `${result.rejectedForeign} ikke-norske` : "",
+    result.rejectedDuplicate ? `${result.rejectedDuplicate} duplikater` : "",
+  ].filter(Boolean);
+  const foreignNote = filteredParts.length ? ` (${filteredParts.join(" + ")} filtrert bort)` : "";
   const message = !result.ok
     ? "Kunne ikke hente leads fra Apollo akkurat nå."
     : result.imported === 0
