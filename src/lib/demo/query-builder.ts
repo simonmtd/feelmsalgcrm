@@ -51,6 +51,7 @@ function defaultsFor(table: TableName): Row {
         follow_up_reminded_at: null,
         apollo_person_id: null,
         enriched_at: null,
+        org_number: null,
         deal_size: null,
         website: null,
         industry: null,

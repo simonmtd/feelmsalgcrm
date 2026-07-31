@@ -1,6 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { searchApolloPeople } from "@/lib/apollo";
+import { verifyNorwegianCompany, type BrregMatch } from "@/lib/brreg";
 import { matchNiche } from "@/lib/niche-matcher";
 import type { Niche } from "@/lib/types";
 
@@ -9,8 +10,14 @@ export interface ApolloFetchResult {
   imported: number;
   autoClassified: number;
   scanned: number;
+  /** Candidates dropped because they aren't verified Norwegian companies. */
+  rejectedForeign: number;
   error?: string;
 }
+
+/** Stop scanning after this many candidates so a low match-rate run can't run
+ *  past the serverless time budget (each candidate does a brreg lookup). */
+const MAX_SCAN = 250;
 
 /** Feelm's ideal-customer titles (decision-makers who buy video), Norway-wide. */
 const ICP_TITLES = [
@@ -54,7 +61,7 @@ export async function runApolloLeadFetch(
   opts: { keywords?: string; nicheId?: string | null } = {}
 ): Promise<ApolloFetchResult> {
   if (!process.env.APOLLO_API_KEY && process.env.DEMO_MOCK !== "1") {
-    return { ok: false, imported: 0, autoClassified: 0, scanned: 0, error: "APOLLO_API_KEY mangler." };
+    return { ok: false, imported: 0, autoClassified: 0, scanned: 0, rejectedForeign: 0, error: "APOLLO_API_KEY mangler." };
   }
 
   const supabase = createAdminClient();
@@ -75,9 +82,12 @@ export async function runApolloLeadFetch(
   let imported = 0;
   let autoClassified = 0;
   let scanned = 0;
+  let rejectedForeign = 0;
+  // Cache brreg lookups within a run (many rows can share a company name).
+  const brregCache = new Map<string, BrregMatch | null>();
 
   try {
-    for (let page = 1; page <= MAX_PAGES && imported < target; page++) {
+    for (let page = 1; page <= MAX_PAGES && imported < target && scanned < MAX_SCAN; page++) {
       const { people } = await searchApolloPeople({
         titles: ICP_TITLES,
         locations: ICP_LOCATIONS,
@@ -86,14 +96,26 @@ export async function runApolloLeadFetch(
         keywords: opts.keywords,
       });
       if (people.length === 0) break; // no more results
-      scanned += people.length;
 
       const rows = [];
       for (const p of people) {
-        if (imported + rows.length >= target) break;
+        if (imported + rows.length >= target || scanned >= MAX_SCAN) break;
         if (seen.has(p.apolloId)) continue;
         if (!p.hasEmail && !p.hasPhone) continue; // skip unreachable prospects
         seen.add(p.apolloId);
+        scanned++;
+
+        // Verify against Brønnøysund: only genuine Norwegian companies pass.
+        const key = (p.companyName ?? "").toLowerCase().trim();
+        let brreg = brregCache.get(key);
+        if (brreg === undefined) {
+          brreg = await verifyNorwegianCompany(p.companyName);
+          brregCache.set(key, brreg);
+        }
+        if (!brreg) {
+          rejectedForeign++;
+          continue; // not a verified Norwegian company
+        }
 
         // When the admin picked a specific bransje we searched for it directly,
         // so tag every import with that niche. Otherwise best-effort match.
@@ -111,6 +133,7 @@ export async function runApolloLeadFetch(
         rows.push({
           apollo_person_id: p.apolloId,
           company_name: p.companyName,
+          org_number: brreg.orgNumber,
           job_title: p.jobTitle,
           niche_id: nicheId,
           source: "apollo",
@@ -128,9 +151,9 @@ export async function runApolloLeadFetch(
       }
     }
 
-    return { ok: true, imported, autoClassified, scanned };
+    return { ok: true, imported, autoClassified, scanned, rejectedForeign };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return { ok: false, imported, autoClassified, scanned, error: message };
+    return { ok: false, imported, autoClassified, scanned, rejectedForeign, error: message };
   }
 }

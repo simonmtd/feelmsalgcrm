@@ -271,6 +271,23 @@ export function LeadDetail({
                 <p className="text-ink">{lead.source}</p>
               </div>
               <div>
+                <p className="text-xs text-wood-700">Org.nr</p>
+                <p className="text-ink">
+                  {lead.org_number ? (
+                    <a
+                      href={`https://virksomhet.brreg.no/nb/oppslag/enheter/${lead.org_number}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono hover:underline"
+                    >
+                      {lead.org_number}
+                    </a>
+                  ) : (
+                    "–"
+                  )}
+                </p>
+              </div>
+              <div>
                 <p className="text-xs text-wood-700">Tildelt dato</p>
                 <p className="text-ink">{lead.assigned_date ?? "–"}</p>
               </div>

@@ -167,6 +167,7 @@ function buildSeed(): DemoStore {
       follow_up_reminded_at: null,
       apollo_person_id: null,
       enriched_at: null,
+      org_number: null,
       raw_hubspot_data: null,
       created_at: createdAt,
       updated_at: createdAt,

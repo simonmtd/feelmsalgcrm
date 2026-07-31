@@ -494,13 +494,16 @@ export async function fetchApolloLeads(
   revalidatePath("/admin/leads");
   revalidatePath("/dashboard");
 
+  const foreignNote = result.rejectedForeign
+    ? ` (${result.rejectedForeign} ikke-norske filtrert bort)`
+    : "";
   const message = !result.ok
     ? "Kunne ikke hente leads fra Apollo akkurat nå."
     : result.imported === 0
-      ? "Ingen nye leads å hente (alle treff finnes allerede)."
-      : `Hentet ${result.imported} nye leads${
+      ? `Ingen nye norske leads å hente${foreignNote}.`
+      : `Hentet ${result.imported} nye norske leads${
           result.autoClassified ? `, ${result.autoClassified} auto-klassifisert` : ""
-        }. Berik dem for å låse opp kontaktinfo.`;
+        }${foreignNote}. Berik dem for å låse opp kontaktinfo.`;
 
   return {
     ok: result.ok,
