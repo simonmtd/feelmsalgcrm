@@ -204,7 +204,11 @@ export async function searchApolloPeople(input: {
   const key = requireKey();
   const body: Record<string, unknown> = {
     person_titles: input.titles,
+    // person_locations filters on the PERSON's location; organization_locations
+    // on the COMPANY's HQ. Both must be Norway so we don't pull foreign
+    // companies that merely happen to have a Norway-based employee.
     person_locations: input.locations,
+    organization_locations: input.locations,
     page: input.page,
     per_page: input.perPage ?? 25,
   };
