@@ -25,7 +25,11 @@ function revalidateMeetingViews() {
  * Marks a meeting's deal as signed (or not). A seller can do this for their own
  * meetings, an admin for anyone's. Feeds the dashboard leaderboard.
  */
-export async function setMeetingSigned(meetingId: string, signed: boolean) {
+export async function setMeetingSigned(
+  meetingId: string,
+  signed: boolean,
+  amount?: number | null
+) {
   const profile = await requireProfile();
   const supabase = await createClient();
 
@@ -40,10 +44,23 @@ export async function setMeetingSigned(meetingId: string, signed: boolean) {
     throw new Error("Du kan bare endre dine egne møter.");
   }
 
-  const { error } = await supabase
-    .from("meetings")
-    .update({ signed, signed_at: signed ? new Date().toISOString() : null })
-    .eq("id", meetingId);
+  const update: {
+    signed: boolean;
+    signed_at: string | null;
+    deal_size?: number;
+  } = {
+    signed,
+    signed_at: signed ? new Date().toISOString() : null,
+  };
+  // When signing, let the seller enter/confirm the signed amount.
+  if (signed && amount != null) {
+    if (!Number.isFinite(amount) || amount < 0) {
+      throw new Error("Beløpet må være et positivt tall.");
+    }
+    update.deal_size = amount;
+  }
+
+  const { error } = await supabase.from("meetings").update(update).eq("id", meetingId);
   if (error) throwSafe("setMeetingSigned", error);
 
   revalidateMeetingViews();

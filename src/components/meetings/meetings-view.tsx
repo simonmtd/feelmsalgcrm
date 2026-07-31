@@ -51,6 +51,8 @@ function MeetingRow({
   onChanged: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
+  const [signing, setSigning] = useState(false);
+  const [amount, setAmount] = useState("");
 
   return (
     <tr className="border-b border-ink/15 align-top">
@@ -115,19 +117,56 @@ function MeetingRow({
             <CheckCircle2 className="h-3.5 w-3.5" /> Signert
           </button>
         ) : canEdit ? (
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={() =>
-              startTransition(async () => {
-                await setMeetingSigned(meeting.id, true);
-                onChanged();
-              })
-            }
-            className="inline-flex items-center gap-1 rounded-sm border-2 border-ink bg-wood-100 px-2 py-1 text-xs text-wood-800 transition-colors hover:bg-gold-300 disabled:opacity-50"
-          >
-            Marker signert
-          </button>
+          signing ? (
+            <div className="flex items-center gap-1">
+              <Input
+                type="number"
+                min={0}
+                autoFocus
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="Beløp"
+                className="h-8 w-24 text-xs"
+              />
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() =>
+                  startTransition(async () => {
+                    await setMeetingSigned(
+                      meeting.id,
+                      true,
+                      amount.trim() ? Number(amount) : null
+                    );
+                    setSigning(false);
+                    onChanged();
+                  })
+                }
+                className="rounded-sm border-2 border-ink bg-forest-500 px-2 py-1 text-xs font-bold text-parchment shadow-[2px_2px_0_0_var(--color-ink)] disabled:opacity-50"
+              >
+                Signer
+              </button>
+              <button
+                type="button"
+                onClick={() => setSigning(false)}
+                className="px-1 text-xs text-wood-600 hover:text-ink"
+              >
+                Avbryt
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => {
+                setAmount(meeting.deal_size != null ? String(meeting.deal_size) : "");
+                setSigning(true);
+              }}
+              className="inline-flex items-center gap-1 rounded-sm border-2 border-ink bg-wood-100 px-2 py-1 text-xs text-wood-800 transition-colors hover:bg-gold-300 disabled:opacity-50"
+            >
+              Marker signert
+            </button>
+          )
         ) : (
           <span className="text-sm text-wood-600">–</span>
         )}
