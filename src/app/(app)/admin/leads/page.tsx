@@ -4,7 +4,7 @@ import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { TriggerAssignmentButton } from "@/components/admin/trigger-assignment-button";
-import { FetchApolloButton } from "@/components/admin/fetch-apollo-button";
+import { FetchApolloPanel } from "@/components/admin/fetch-apollo-panel";
 import { EnrichBatchPanel } from "@/components/admin/enrich-batch-panel";
 import { BulkAssignLeadsTable } from "@/components/admin/bulk-assign-leads-table";
 import { LeadMap } from "@/components/leads/lead-map";
@@ -108,9 +108,10 @@ export default async function AdminLeadsPage({
           params={{ niche, status, q, period, quality }}
           active={isMap ? "map" : "list"}
         />
-        <FetchApolloButton niches={(niches as Niche[] | null) ?? []} />
         <TriggerAssignmentButton />
       </div>
+
+      <FetchApolloPanel niches={(niches as Niche[] | null) ?? []} />
 
       <EnrichBatchPanel
         missingAll={missingAll ?? 0}

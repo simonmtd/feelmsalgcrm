@@ -19,6 +19,7 @@ import {
 import { ENRICH_BATCH_MAX } from "@/lib/enrichment";
 import { matchNiche } from "@/lib/niche-matcher";
 import { normEmail } from "@/lib/dedup";
+import { expandTitles, areaToLocations, validEmployeeRange } from "@/lib/prospecting";
 import type { Niche } from "@/lib/types";
 
 export interface FormActionState {
@@ -477,23 +478,30 @@ export interface ApolloFetchActionResult {
  * ICP-matched prospects into the pool (deduped, auto-classified). Contact info
  * stays masked until enriched — import itself spends no reveal credits.
  */
+export interface FetchApolloInput {
+  count?: number;
+  nicheId?: string | null;
+  titleKeys?: string[];
+  employeeRange?: string | null;
+  area?: string | null;
+}
+
 export async function fetchApolloLeads(
-  count = 25,
-  nicheId?: string | null
+  input: FetchApolloInput = {}
 ): Promise<ApolloFetchActionResult> {
   const actor = await requireAdmin();
-  const limit = Math.max(1, Math.min(100, Math.floor(count) || 0));
+  const limit = Math.max(1, Math.min(100, Math.floor(input.count ?? 25) || 0));
 
   // If a bransje was chosen, look it up and search Apollo for that keyword,
   // tagging every import with that niche.
   let keywords: string | undefined;
   let validNicheId: string | null = null;
-  if (nicheId) {
+  if (input.nicheId) {
     const admin = createAdminClient();
     const { data: niche } = await admin
       .from("niches")
       .select("id, name")
-      .eq("id", nicheId)
+      .eq("id", input.nicheId)
       .maybeSingle();
     if (niche) {
       validNicheId = niche.id as string;
@@ -501,7 +509,15 @@ export async function fetchApolloLeads(
     }
   }
 
-  const result = await runApolloLeadFetch(limit, { keywords, nicheId: validNicheId });
+  const result = await runApolloLeadFetch(limit, {
+    keywords,
+    nicheId: validNicheId,
+    titles: expandTitles(input.titleKeys ?? []),
+    locations: areaToLocations(input.area),
+    employeeRanges: validEmployeeRange(input.employeeRange)
+      ? [validEmployeeRange(input.employeeRange)!]
+      : undefined,
+  });
 
   await logAudit(actor, "leads.apollo_fetch", {
     details: {

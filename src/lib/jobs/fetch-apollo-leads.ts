@@ -61,7 +61,13 @@ const PER_PAGE = 25;
  */
 export async function runApolloLeadFetch(
   limit = 25,
-  opts: { keywords?: string; nicheId?: string | null } = {}
+  opts: {
+    keywords?: string;
+    nicheId?: string | null;
+    titles?: string[];
+    locations?: string[];
+    employeeRanges?: string[];
+  } = {}
 ): Promise<ApolloFetchResult> {
   if (!process.env.APOLLO_API_KEY && process.env.DEMO_MOCK !== "1") {
     return { ok: false, imported: 0, autoClassified: 0, scanned: 0, rejectedForeign: 0, rejectedDuplicate: 0, error: "APOLLO_API_KEY mangler." };
@@ -98,11 +104,12 @@ export async function runApolloLeadFetch(
   try {
     for (let page = 1; page <= MAX_PAGES && imported < target && scanned < MAX_SCAN; page++) {
       const { people } = await searchApolloPeople({
-        titles: ICP_TITLES,
-        locations: ICP_LOCATIONS,
+        titles: opts.titles?.length ? opts.titles : ICP_TITLES,
+        locations: opts.locations?.length ? opts.locations : ICP_LOCATIONS,
         page,
         perPage: PER_PAGE,
         keywords: opts.keywords,
+        employeeRanges: opts.employeeRanges,
       });
       if (people.length === 0) break; // no more results
 
