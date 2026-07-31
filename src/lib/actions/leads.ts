@@ -6,6 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireProfile } from "@/lib/dal";
 import { throwSafe, safeError } from "@/lib/actions/errors";
 import { enrichPerson, splitName, toDomain, enrichmentUpdate } from "@/lib/apollo";
+import { matchNiche } from "@/lib/niche-matcher";
+import type { Niche } from "@/lib/types";
 import {
   LEAD_STATUS_LABELS,
   FILMING_STATUS_LABELS,
@@ -277,7 +279,7 @@ export async function enrichLead(leadId: string): Promise<EnrichResult> {
 
   const { data: lead, error: fetchErr } = await supabase
     .from("leads")
-    .select("company_name, contact_name, email, phone, website, industry, job_title")
+    .select("company_name, contact_name, email, phone, website, industry, job_title, apollo_person_id, niche_id")
     .eq("id", leadId)
     .single();
   if (fetchErr || !lead) throw new Error("Fant ikke lead.");
@@ -287,6 +289,8 @@ export async function enrichLead(leadId: string): Promise<EnrichResult> {
   let result;
   try {
     result = await enrichPerson({
+      // Prefer an exact Apollo id (leads imported from Apollo have masked names).
+      apolloId: lead.apollo_person_id,
       firstName: first,
       lastName: last,
       organizationName: lead.company_name,
@@ -305,8 +309,21 @@ export async function enrichLead(leadId: string): Promise<EnrichResult> {
 
   // Fill-if-missing: only set a column the lead doesn't already have.
   const { update, filled } = enrichmentUpdate(lead, result);
-  update.apollo_person_id = result.apolloPersonId;
+  update.apollo_person_id = result.apolloPersonId ?? lead.apollo_person_id;
   update.enriched_at = new Date().toISOString();
+
+  // If still unclassified, try to match a niche now that enrichment may have
+  // added industry/website (important for Apollo-imported leads).
+  if (!lead.niche_id) {
+    const { data: nichesData } = await supabase.from("niches").select("*");
+    const niche = matchNiche((nichesData as Niche[] | null) ?? [], {
+      company: lead.company_name ?? result.organizationName,
+      industry: lead.industry ?? result.industry,
+      website: lead.website ?? result.website,
+      title: lead.job_title ?? result.jobTitle,
+    });
+    if (niche) update.niche_id = niche.id;
+  }
 
   const admin = createAdminClient();
   const { error } = await admin.from("leads").update(update).eq("id", leadId);

@@ -4,6 +4,7 @@ import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { TriggerAssignmentButton } from "@/components/admin/trigger-assignment-button";
+import { FetchApolloButton } from "@/components/admin/fetch-apollo-button";
 import { EnrichBatchPanel } from "@/components/admin/enrich-batch-panel";
 import { BulkAssignLeadsTable } from "@/components/admin/bulk-assign-leads-table";
 import { LeadMap } from "@/components/leads/lead-map";
@@ -59,17 +60,17 @@ export default async function AdminLeadsPage({
       .select("assigned_to")
       .not("assigned_to", "is", null)
       .not("status", "in", '("won","lost")'),
-    // Leads missing a phone number (needs a name to enrich), for the batch panel.
+    // Leads missing a phone that we can still enrich (have a name or Apollo id).
     supabase
       .from("leads")
       .select("id", { count: "exact", head: true })
       .is("phone", null)
-      .not("contact_name", "is", null),
+      .or("contact_name.not.is.null,apollo_person_id.not.is.null"),
     supabase
       .from("leads")
       .select("id", { count: "exact", head: true })
       .is("phone", null)
-      .not("contact_name", "is", null)
+      .or("contact_name.not.is.null,apollo_person_id.not.is.null")
       .not("assigned_to", "is", null),
   ]);
 
@@ -107,6 +108,7 @@ export default async function AdminLeadsPage({
           params={{ niche, status, q, period, quality }}
           active={isMap ? "map" : "list"}
         />
+        <FetchApolloButton />
         <TriggerAssignmentButton />
       </div>
 

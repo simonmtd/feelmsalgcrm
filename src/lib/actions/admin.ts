@@ -8,6 +8,7 @@ import { logAudit } from "@/lib/audit";
 import { notify } from "@/lib/notifications";
 import { runHubspotSync } from "@/lib/jobs/sync-hubspot";
 import { runDailyAssignment } from "@/lib/jobs/assign-daily-leads";
+import { runApolloLeadFetch } from "@/lib/jobs/fetch-apollo-leads";
 import {
   enrichPerson,
   splitName,
@@ -16,6 +17,8 @@ import {
   type LeadEnrichSnapshot,
 } from "@/lib/apollo";
 import { ENRICH_BATCH_MAX } from "@/lib/enrichment";
+import { matchNiche } from "@/lib/niche-matcher";
+import type { Niche } from "@/lib/types";
 
 export interface FormActionState {
   error?: string;
@@ -331,11 +334,19 @@ export async function enrichLeadsBatch(input: {
   const limit = Math.max(1, Math.min(ENRICH_BATCH_MAX, Math.floor(input.limit) || 0));
 
   const admin = createAdminClient();
-  type BatchRow = LeadEnrichSnapshot & { id: string; contact_name: string | null };
+  type BatchRow = LeadEnrichSnapshot & {
+    id: string;
+    contact_name: string | null;
+    apollo_person_id: string | null;
+    niche_id: string | null;
+  };
+
+  // We can enrich a lead that has EITHER a name to match on OR an Apollo id
+  // (leads imported from Apollo have masked names but a stable id).
+  const matchable = "contact_name.not.is.null,apollo_person_id.not.is.null";
 
   // Two independent, fully-chained queries (rather than reassigning or unioning
-  // builders, which trips TS2589). Both fetch leads missing a phone that still
-  // have a name to match on; "assigned" additionally requires a seller.
+  // builders, which trips TS2589). "assigned" additionally requires a seller.
   // assigned_to desc prioritises worked leads first even in "all" scope.
   let rows: BatchRow[];
   if (scope === "assigned") {
@@ -343,7 +354,7 @@ export async function enrichLeadsBatch(input: {
       .from("leads")
       .select("*")
       .is("phone", null)
-      .not("contact_name", "is", null)
+      .or(matchable)
       .not("assigned_to", "is", null)
       .order("assigned_to", { ascending: false, nullsFirst: false })
       .limit(limit);
@@ -354,12 +365,16 @@ export async function enrichLeadsBatch(input: {
       .from("leads")
       .select("*")
       .is("phone", null)
-      .not("contact_name", "is", null)
+      .or(matchable)
       .order("assigned_to", { ascending: false, nullsFirst: false })
       .limit(limit);
     if (error) throwSafe("enrichLeadsBatch", error);
     rows = (data ?? []) as BatchRow[];
   }
+
+  const { data: nichesData } = await admin.from("niches").select("*");
+  const niches = (nichesData as Niche[] | null) ?? [];
+
   let processed = 0;
   let phonePending = 0;
   const filled: Record<string, number> = {};
@@ -368,6 +383,7 @@ export async function enrichLeadsBatch(input: {
     try {
       const { first, last } = splitName(lead.contact_name);
       const result = await enrichPerson({
+        apolloId: lead.apollo_person_id,
         firstName: first,
         lastName: last,
         organizationName: lead.company_name,
@@ -375,8 +391,17 @@ export async function enrichLeadsBatch(input: {
         email: lead.email,
       });
       const { update, filled: fills } = enrichmentUpdate(lead, result);
-      update.apollo_person_id = result.apolloPersonId;
+      update.apollo_person_id = result.apolloPersonId ?? lead.apollo_person_id;
       update.enriched_at = new Date().toISOString();
+      if (!lead.niche_id) {
+        const niche = matchNiche(niches, {
+          company: lead.company_name ?? result.organizationName,
+          industry: lead.industry ?? result.industry,
+          website: lead.website ?? result.website,
+          title: lead.job_title ?? result.jobTitle,
+        });
+        if (niche) update.niche_id = niche.id;
+      }
       await admin.from("leads").update(update).eq("id", lead.id);
       processed++;
       if (result.phonePending) phonePending++;
@@ -404,4 +429,44 @@ export async function enrichLeadsBatch(input: {
         }`;
 
   return { ok: true, processed, phonePending, filled, message };
+}
+
+export interface ApolloFetchActionResult {
+  ok: boolean;
+  imported: number;
+  autoClassified: number;
+  message: string;
+}
+
+/**
+ * Admin-triggered version of the daily Apollo prospecting import. Pulls fresh
+ * ICP-matched prospects into the pool (deduped, auto-classified). Contact info
+ * stays masked until enriched — import itself spends no reveal credits.
+ */
+export async function fetchApolloLeads(count = 25): Promise<ApolloFetchActionResult> {
+  const actor = await requireAdmin();
+  const limit = Math.max(1, Math.min(100, Math.floor(count) || 0));
+
+  const result = await runApolloLeadFetch(limit);
+
+  await logAudit(actor, "leads.apollo_fetch", {
+    details: { imported: result.imported, autoClassified: result.autoClassified },
+  });
+  revalidatePath("/admin/leads");
+  revalidatePath("/dashboard");
+
+  const message = !result.ok
+    ? "Kunne ikke hente leads fra Apollo akkurat nå."
+    : result.imported === 0
+      ? "Ingen nye leads å hente (alle treff finnes allerede)."
+      : `Hentet ${result.imported} nye leads${
+          result.autoClassified ? `, ${result.autoClassified} auto-klassifisert` : ""
+        }. Berik dem for å låse opp kontaktinfo.`;
+
+  return {
+    ok: result.ok,
+    imported: result.imported,
+    autoClassified: result.autoClassified,
+    message,
+  };
 }

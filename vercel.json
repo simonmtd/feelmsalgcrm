@@ -2,6 +2,7 @@
   "regions": ["arn1"],
   "crons": [
     { "path": "/api/cron/sync-hubspot", "schedule": "*/20 * * * *" },
+    { "path": "/api/cron/fetch-apollo-leads", "schedule": "30 5 * * *" },
     { "path": "/api/cron/assign-daily-leads", "schedule": "0 6 * * *" },
     { "path": "/api/cron/follow-up-reminders", "schedule": "0 6 * * *" }
   ]

@@ -4,6 +4,9 @@ import { DEMO_MOCK } from "@/lib/demo/mode";
 const APOLLO_BASE = "https://api.apollo.io/api/v1";
 
 export interface ApolloEnrichInput {
+  /** Apollo person id — when set, we match by id (exact), ignoring name/company.
+   *  Used for leads sourced from Apollo search, whose name is masked on import. */
+  apolloId?: string | null;
   firstName?: string | null;
   lastName?: string | null;
   organizationName?: string | null;
@@ -102,6 +105,8 @@ export async function enrichPerson(
   const body: Record<string, unknown> = {
     reveal_personal_emails: true,
   };
+  // An exact Apollo id is the most reliable match; fall back to name+company.
+  if (input.apolloId) body.id = input.apolloId;
   if (input.firstName) body.first_name = input.firstName;
   if (input.lastName) body.last_name = input.lastName;
   if (input.organizationName) body.organization_name = input.organizationName;
@@ -156,6 +161,75 @@ export async function enrichPerson(
     jobTitle: person.title ?? null,
     organizationName: person.organization?.name ?? null,
   };
+}
+
+export interface ApolloProspect {
+  apolloId: string;
+  companyName: string | null;
+  jobTitle: string | null;
+  /** Whether Apollo holds an email / direct phone we could reveal on enrichment. */
+  hasEmail: boolean;
+  hasPhone: boolean;
+}
+
+interface ApolloSearchPerson {
+  id?: string;
+  title?: string | null;
+  has_email?: boolean;
+  has_direct_phone?: boolean;
+  organization?: { name?: string | null } | null;
+}
+
+/**
+ * Searches Apollo's people database (prospecting) for one page of candidates
+ * matching the given titles + locations. The search response is heavily masked
+ * — you get a stable id, title, company name and has_email/has_direct_phone
+ * flags, but the real name/email/phone are only revealed later via enrichPerson
+ * (which costs credits). Returns fake prospects in demo mode.
+ */
+export async function searchApolloPeople(input: {
+  titles: string[];
+  locations: string[];
+  page: number;
+  perPage?: number;
+}): Promise<{ people: ApolloProspect[] }> {
+  if (DEMO_MOCK) {
+    const { searchDemoApolloPeople } = await import("@/lib/demo/apollo");
+    return searchDemoApolloPeople(input);
+  }
+
+  const key = requireKey();
+  const res = await fetch(`${APOLLO_BASE}/mixed_people/api_search`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-cache",
+      "X-Api-Key": key,
+    },
+    cache: "no-store",
+    body: JSON.stringify({
+      person_titles: input.titles,
+      person_locations: input.locations,
+      page: input.page,
+      per_page: input.perPage ?? 25,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Apollo search-feil (${res.status}): ${await res.text()}`);
+  }
+
+  const data = (await res.json()) as { people?: ApolloSearchPerson[] };
+  const people: ApolloProspect[] = (data.people ?? [])
+    .filter((p) => p.id)
+    .map((p) => ({
+      apolloId: p.id as string,
+      companyName: p.organization?.name ?? null,
+      jobTitle: p.title ?? null,
+      hasEmail: Boolean(p.has_email),
+      hasPhone: Boolean(p.has_direct_phone),
+    }));
+  return { people };
 }
 
 /** Splits a full name into first/last for Apollo's match params. */
