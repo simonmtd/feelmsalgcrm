@@ -195,7 +195,10 @@ export async function logCallOutcome(leadId: string, outcome: CallOutcome) {
         ? nextBusinessMorning()
         : null;
 
-  const { error } = await supabase
+  // follow_up_reminded_at isn't in the seller column grant (migration 0004), so
+  // this write goes through the service-role client. Ownership already verified.
+  const admin = createAdminClient();
+  const { error } = await admin
     .from("leads")
     .update({ status: cfg.status, next_follow_up_at, follow_up_reminded_at: null })
     .eq("id", leadId);
@@ -363,7 +366,10 @@ export async function addLeadActivity(
   // still change it manually). Resetting the reminder timestamp ensures the
   // daily job sends a fresh reminder for the new date.
   if (type === "call" || type === "email") {
-    await supabase
+    // follow_up_reminded_at isn't seller-grantable (migration 0004), so write
+    // via the service-role client. Ownership was verified by assertOwnsLead.
+    const admin = createAdminClient();
+    await admin
       .from("leads")
       .update({ next_follow_up_at: suggestedFollowUp(), follow_up_reminded_at: null })
       .eq("id", leadId);
