@@ -1,15 +1,17 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Pencil, Sparkles } from "lucide-react";
+import { Pencil, Sparkles, Phone, PhoneOff, Voicemail, ThumbsDown, ThumbsUp, CalendarCheck } from "lucide-react";
 import {
   updateLeadStatus,
   updateLeadFilmingStatus,
   updateLeadDetails,
   updateLeadContact,
   enrichLead,
+  logCallOutcome,
   addLeadActivity,
 } from "@/lib/actions/leads";
+import type { CallOutcome } from "@/lib/actions/leads";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
@@ -69,9 +71,62 @@ export function LeadDetail({
     });
   }
 
+  const [outcomeMsg, setOutcomeMsg] = useState<string | null>(null);
+  function registerOutcome(outcome: CallOutcome, label: string) {
+    setOutcomeMsg(null);
+    startTransition(async () => {
+      await logCallOutcome(lead.id, outcome);
+      setOutcomeMsg(`Registrert: ${label}.`);
+    });
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="flex flex-col gap-6 lg:col-span-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Ring &amp; registrer utfall</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {lead.phone ? (
+              <a
+                href={`tel:${lead.phone}`}
+                className="flex items-center justify-center gap-2 rounded-sm border-2 border-ink bg-forest-600 px-4 py-3 text-lg font-bold text-parchment shadow-[3px_3px_0_0_var(--color-ink)] transition-transform hover:-translate-y-0.5"
+              >
+                <Phone className="h-5 w-5" /> Ring {lead.phone}
+              </a>
+            ) : (
+              <div className="flex items-center justify-center gap-2 rounded-sm border-2 border-dashed border-ink/40 px-4 py-3 text-sm text-wood-600">
+                <PhoneOff className="h-4 w-4" /> Ingen telefon — bruk «Berik» eller «Rediger»
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {(
+                [
+                  ["no_answer", "Ikke svar", PhoneOff],
+                  ["voicemail", "La igjen beskjed", Voicemail],
+                  ["interested", "Interessert", ThumbsUp],
+                  ["meeting_booked", "Møte booket", CalendarCheck],
+                  ["not_interested", "Ikke interessert", ThumbsDown],
+                ] as const
+              ).map(([key, label, Icon]) => (
+                <Button
+                  key={key}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isPending}
+                  className="justify-start"
+                  onClick={() => registerOutcome(key, label)}
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0" /> {label}
+                </Button>
+              ))}
+            </div>
+            {outcomeMsg && <p className="text-sm text-forest-700">{outcomeMsg}</p>}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <div className="flex items-start justify-between gap-3">

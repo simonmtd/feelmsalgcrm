@@ -135,6 +135,76 @@ function suggestedFollowUp(): string {
   return d.toISOString();
 }
 
+/** Next business morning at 09:00 — for a quick retry after "no answer". */
+function nextBusinessMorning(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(9, 0, 0, 0);
+  if (d.getDay() === 6) d.setDate(d.getDate() + 2); // Sat -> Mon
+  else if (d.getDay() === 0) d.setDate(d.getDate() + 1); // Sun -> Mon
+  return d.toISOString();
+}
+
+export type CallOutcome =
+  | "no_answer"
+  | "voicemail"
+  | "not_interested"
+  | "interested"
+  | "meeting_booked";
+
+/**
+ * A logged call outcome maps to: an activity note, a new lead status, and a
+ * follow-up timing rule. "standard" = +2 business days, "soon" = next business
+ * morning (retry), "none" = clear the follow-up.
+ */
+const CALL_OUTCOMES: Record<
+  CallOutcome,
+  { note: string; status: LeadStatus; followUp: "standard" | "soon" | "none" }
+> = {
+  no_answer: { note: "Ringte – ikke svar", status: "follow_up", followUp: "soon" },
+  voicemail: { note: "La igjen beskjed", status: "contacted", followUp: "standard" },
+  not_interested: { note: "Ikke interessert", status: "lost", followUp: "none" },
+  interested: { note: "Interessert – følg opp", status: "follow_up", followUp: "standard" },
+  meeting_booked: { note: "Møte booket", status: "contacted", followUp: "none" },
+};
+
+/**
+ * One-click call disposition: records the call, updates the lead's status, and
+ * sets (or clears) the next follow-up date — all in one action, so a seller
+ * working the phone doesn't have to touch three separate controls per call.
+ */
+export async function logCallOutcome(leadId: string, outcome: CallOutcome) {
+  const cfg = CALL_OUTCOMES[outcome];
+  if (!cfg) throw new Error("Ugyldig samtaleutfall.");
+  const { profile, supabase } = await assertOwnsLead(leadId);
+
+  const { error: actErr } = await supabase.from("lead_activities").insert({
+    lead_id: leadId,
+    seller_id: profile.id,
+    type: "call" as ActivityType,
+    content: cfg.note,
+  });
+  if (actErr) throwSafe("logCallOutcome", actErr);
+
+  const next_follow_up_at =
+    cfg.followUp === "standard"
+      ? suggestedFollowUp()
+      : cfg.followUp === "soon"
+        ? nextBusinessMorning()
+        : null;
+
+  const { error } = await supabase
+    .from("leads")
+    .update({ status: cfg.status, next_follow_up_at, follow_up_reminded_at: null })
+    .eq("id", leadId);
+  if (error) throwSafe("logCallOutcome", error);
+
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/leads");
+  revalidatePath("/today");
+  revalidatePath("/dashboard");
+}
+
 export interface LeadContactFields {
   company_name?: string | null;
   contact_name?: string | null;
