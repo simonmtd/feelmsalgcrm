@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireProfile } from "@/lib/dal";
 import { safeError, throwSafe } from "@/lib/actions/errors";
 import { MEETING_TYPE_LABELS, PRODUCT_TYPE_LABELS } from "@/lib/types";
@@ -80,7 +81,8 @@ export async function createMeeting(
   const endTime = String(formData.get("end_time") ?? "");
   const location = String(formData.get("location") ?? "").trim().slice(0, 200) || null;
   const requestedSellerId = String(formData.get("seller_id") ?? "");
-  const leadId = String(formData.get("lead_id") ?? "") || null;
+  let leadId = String(formData.get("lead_id") ?? "") || null;
+  const newCustomer = String(formData.get("new_customer") ?? "").trim().slice(0, 200);
   const productRaw = String(formData.get("product_type") ?? "");
   const dealSizeRaw = String(formData.get("deal_size") ?? "").trim();
 
@@ -110,6 +112,25 @@ export async function createMeeting(
   }
 
   const sellerId = profile.role === "admin" && requestedSellerId ? requestedSellerId : profile.id;
+
+  // New customer typed in the combobox → create a lead for it (assigned to the
+  // meeting's seller) so the customer is tracked, then link the meeting to it.
+  if (!leadId && newCustomer) {
+    const admin = createAdminClient();
+    const { data: created, error: leadErr } = await admin
+      .from("leads")
+      .insert({
+        company_name: newCustomer,
+        source: "manual",
+        status: "assigned",
+        assigned_to: sellerId,
+        assigned_date: new Date().toISOString().slice(0, 10),
+      })
+      .select("id")
+      .single();
+    if (leadErr) return { error: safeError("createMeeting.newLead", leadErr) };
+    leadId = created?.id ?? null;
+  }
 
   const { error } = await supabase.from("meetings").insert({
     seller_id: sellerId,

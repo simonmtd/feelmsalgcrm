@@ -15,6 +15,7 @@ import {
   setMeetingSigned,
   type MeetingActionState,
 } from "@/lib/actions/meetings";
+import { LeadCombobox } from "@/components/meetings/lead-combobox";
 import { formatCurrency, cn } from "@/lib/utils";
 import { MEETING_TYPE_LABELS, PRODUCT_TYPE_LABELS } from "@/lib/types";
 import type { Lead, Meeting, MeetingType, ProductType, Profile } from "@/lib/types";
@@ -347,15 +348,8 @@ export function MeetingsView({
                 <Input id="title" name="title" required placeholder="F.eks. Salgsmøte: Nordvik Bygg AS" />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="lead_id">Kunde</Label>
-                <Select id="lead_id" name="lead_id" defaultValue="">
-                  <option value="">Ingen kunde valgt</option>
-                  {leads.map((lead) => (
-                    <option key={lead.id} value={lead.id}>
-                      {lead.company_name ?? "Ukjent firma"}
-                    </option>
-                  ))}
-                </Select>
+                <Label>Kunde</Label>
+                <LeadCombobox leads={leads} />
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="type">Møtetype</Label>
