@@ -36,35 +36,43 @@ export default async function DashboardPage() {
 
   // Team leaderboard: meetings booked + signed value per seller. Everyone can
   // see it (meetings are team-visible), so it renders for admins and sellers.
-  const [{ data: allMeetings }, { data: sellerRows }] = await Promise.all([
+  const [{ data: allMeetings }, { data: teamRows }] = await Promise.all([
     supabase.from("meetings").select("seller_id, deal_size, signed, type"),
+    // All active team members, incl. admins who also sell (e.g. Tobias). We keep
+    // sellers always, and admins only when they've actually booked a meeting, so
+    // pure-admin accounts don't clutter the board.
     supabase
       .from("profiles")
-      .select("id, full_name, email")
-      .eq("is_active", true)
-      .eq("role", "seller"),
+      .select("id, full_name, email, role")
+      .eq("is_active", true),
   ]);
   const meetingRows =
     (allMeetings as { seller_id: string; deal_size: number | null; signed: boolean; type: string }[] | null) ?? [];
   const leaderboard: LeaderboardRow[] = (
-    (sellerRows as Pick<Profile, "id" | "full_name" | "email">[] | null) ?? []
+    (teamRows as Pick<Profile, "id" | "full_name" | "email" | "role">[] | null) ?? []
   )
     .map((s) => {
       const mine = meetingRows.filter((m) => m.seller_id === s.id);
       return {
         id: s.id,
         name: s.full_name ?? s.email,
+        role: s.role,
         meetings: mine.filter((m) => m.type !== "internal").length,
         signedCount: mine.filter((m) => m.signed).length,
         signedSum: mine.filter((m) => m.signed).reduce((sum, m) => sum + (m.deal_size ?? 0), 0),
       };
     })
+    .filter((r) => r.role === "seller" || r.meetings > 0)
     .sort(
       (a, b) =>
         b.signedSum - a.signedSum ||
         b.signedCount - a.signedCount ||
         b.meetings - a.meetings
-    );
+    )
+    .map(({ role, ...r }) => {
+      void role;
+      return r;
+    });
 
   let scopedLeads: Lead[];
   let recentLeads: Lead[];
