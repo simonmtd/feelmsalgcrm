@@ -49,12 +49,13 @@ export default async function AdminLeadsPage({
     { count: missingAssigned },
   ] = await Promise.all([
     supabase.from("niches").select("*").order("name"),
+    // Everyone active can receive leads — incl. admins who also sell (Tobias).
     supabase
       .from("profiles")
       .select("id, full_name, email")
-      .eq("role", "seller")
-      .eq("is_active", true),
-    // Current workload per seller: open (not won/lost) assigned leads.
+      .eq("is_active", true)
+      .order("full_name"),
+    // Current workload per assignee: open (not won/lost) assigned leads.
     supabase
       .from("leads")
       .select("assigned_to")
