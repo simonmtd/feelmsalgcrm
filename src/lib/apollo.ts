@@ -3,6 +3,9 @@ import { DEMO_MOCK } from "@/lib/demo/mode";
 
 const APOLLO_BASE = "https://api.apollo.io/api/v1";
 
+/** Thrown by enrichPerson when Apollo's plan is out of lead credits. */
+export const APOLLO_NO_CREDITS = "APOLLO_NO_CREDITS";
+
 export interface ApolloEnrichInput {
   /** Apollo person id — when set, we match by id (exact), ignoring name/company.
    *  Used for leads sourced from Apollo search, whose name is masked on import. */
@@ -135,7 +138,13 @@ export async function enrichPerson(
   });
 
   if (!res.ok) {
-    throw new Error(`Apollo API-feil (${res.status}): ${await res.text()}`);
+    const body = await res.text();
+    // Apollo returns 422 "insufficient credits" when the plan's lead credits are
+    // used up — surface a distinct marker so the UI can explain it clearly.
+    if (res.status === 422 && /credit/i.test(body)) {
+      throw new Error(APOLLO_NO_CREDITS);
+    }
+    throw new Error(`Apollo API-feil (${res.status}): ${body}`);
   }
 
   const data = (await res.json()) as { person?: ApolloPerson | null };

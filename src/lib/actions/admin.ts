@@ -14,6 +14,7 @@ import {
   splitName,
   toDomain,
   enrichmentUpdate,
+  APOLLO_NO_CREDITS,
   type LeadEnrichSnapshot,
 } from "@/lib/apollo";
 import { ENRICH_BATCH_MAX } from "@/lib/enrichment";
@@ -380,6 +381,7 @@ export async function enrichLeadsBatch(input: {
   let processed = 0;
   let phonePending = 0;
   let duplicates = 0;
+  let noCredits = false;
   const filled: Record<string, number> = {};
 
   for (const lead of rows) {
@@ -427,6 +429,11 @@ export async function enrichLeadsBatch(input: {
       if (result.phonePending) phonePending++;
       for (const f of fills) filled[f] = (filled[f] ?? 0) + 1;
     } catch (err) {
+      // Out of Apollo credits: stop the whole batch (every further call fails).
+      if (err instanceof Error && err.message === APOLLO_NO_CREDITS) {
+        noCredits = true;
+        break;
+      }
       // One bad lead shouldn't abort the whole batch.
       console.error("[enrichLeadsBatch] lead failed", lead.id, err);
     }
@@ -441,8 +448,9 @@ export async function enrichLeadsBatch(input: {
   revalidatePath("/today");
 
   const parts = Object.entries(filled).map(([k, v]) => `${v} ${k}`);
-  const message =
-    processed === 0
+  const message = noCredits
+    ? `Apollo er tom for credits — stoppet etter ${processed} leads. Fyll på i Apollo for å fortsette.`
+    : processed === 0
       ? "Fant ingen leads uten telefon å berike."
       : `Beriket ${processed} leads.${parts.length ? " Fylte: " + parts.join(", ") + "." : ""}${
           phonePending ? ` Telefon hentes for ${phonePending} (dukker opp om litt).` : ""

@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireProfile } from "@/lib/dal";
 import { throwSafe, safeError } from "@/lib/actions/errors";
-import { enrichPerson, splitName, toDomain, enrichmentUpdate } from "@/lib/apollo";
+import { enrichPerson, splitName, toDomain, enrichmentUpdate, APOLLO_NO_CREDITS } from "@/lib/apollo";
 import { matchNiche } from "@/lib/niche-matcher";
 import { normEmail } from "@/lib/dedup";
 import type { Niche } from "@/lib/types";
@@ -302,12 +302,15 @@ export async function enrichLead(leadId: string): Promise<EnrichResult> {
       email: lead.email,
     });
   } catch (err) {
+    const noCredits = err instanceof Error && err.message === APOLLO_NO_CREDITS;
     return {
       ok: false,
       filled: [],
       phonePending: false,
       found: false,
-      message: safeError("enrichLead", err),
+      message: noCredits
+        ? "Apollo er tom for credits — fyll på i Apollo for å berike flere leads."
+        : safeError("enrichLead", err),
     };
   }
 
