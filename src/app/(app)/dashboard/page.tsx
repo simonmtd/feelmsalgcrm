@@ -74,6 +74,14 @@ export default async function DashboardPage() {
       return r;
     });
 
+  // Signed-deal value from meetings (what the team actually records as landed
+  // deals). Admins see the whole team's; sellers see their own.
+  const signedMeetings = meetingRows.filter((m) => m.signed);
+  const signedValueAll = signedMeetings.reduce((s, m) => s + (m.deal_size ?? 0), 0);
+  const signedValueMine = signedMeetings
+    .filter((m) => m.seller_id === profile.id)
+    .reduce((s, m) => s + (m.deal_size ?? 0), 0);
+
   let scopedLeads: Lead[];
   let recentLeads: Lead[];
 
@@ -206,21 +214,20 @@ export default async function DashboardPage() {
           }
         />
         <StatCard
-          label={isAdmin ? "Vunnet verdi (alle)" : "Vunnet verdi"}
-          value={formatCurrency(stats.dealValue)}
-          trend={stats.dealTrend}
+          label={isAdmin ? "Signert verdi (alle)" : "Signert verdi"}
+          value={formatCurrency(isAdmin ? signedValueAll : signedValueMine)}
+          trend={0}
           icon={Wallet}
           tone="green"
-          chartValues={stats.miniDeal}
           info={
             <>
               <p>
-                Summen av deal size for alle leads med status Vunnet. Leads uten utfylt deal
-                size teller som 0.
+                Summen av deal size for alle møter som er markert <strong>signert</strong>
+                {isAdmin ? " i hele teamet" : " av deg"} — altså faktisk landede deals.
               </p>
               <p>
-                Merk: endringen grupperes etter når leaden ble <em>opprettet</em>, ikke når den
-                ble vunnet.
+                Marker et møte som signert på Møter-siden for at det skal telle her og i
+                leaderboarden.
               </p>
             </>
           }
