@@ -1,6 +1,23 @@
-import type { Lead } from "@/lib/types";
+import type { Lead, LeadStatus } from "@/lib/types";
 
 const OPEN_STATUSES = new Set(["new", "assigned", "contacted", "follow_up"]);
+
+/**
+ * A lead counts as "kontaktet" once it has moved past the untouched new/assigned
+ * stages — every registered call outcome does this. This is the inverse of the
+ * "Ikke kontaktet" filter (status new/assigned) on the leads page, so the whole
+ * app agrees on what "contacted" means.
+ */
+export const CONTACTED_STATUSES = new Set<LeadStatus>([
+  "contacted",
+  "follow_up",
+  "won",
+  "lost",
+]);
+
+export function isContacted(status: LeadStatus): boolean {
+  return CONTACTED_STATUSES.has(status);
+}
 
 export function pctChange(current: number, previous: number) {
   if (previous === 0) return current > 0 ? 100 : 0;

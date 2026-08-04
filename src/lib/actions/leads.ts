@@ -164,10 +164,14 @@ const CALL_OUTCOMES: Record<
   CallOutcome,
   { note: string; status: LeadStatus; followUp: "standard" | "soon" | "none" }
 > = {
-  no_answer: { note: "Ringte – ikke svar", status: "follow_up", followUp: "soon" },
+  // Any registered call outcome (even "ikke svar") means the lead has been
+  // contacted, so it lands on status "Kontaktet" — never silently under "Følges
+  // opp". The follow-up *timing* still drives when it resurfaces: "soon" = retry
+  // next morning, "standard" = +2 business days, "none" = clear the follow-up.
+  no_answer: { note: "Ringte – ikke svar", status: "contacted", followUp: "soon" },
   voicemail: { note: "La igjen beskjed", status: "contacted", followUp: "standard" },
   not_interested: { note: "Ikke interessert", status: "lost", followUp: "none" },
-  interested: { note: "Interessert – følg opp", status: "follow_up", followUp: "standard" },
+  interested: { note: "Interessert – følg opp", status: "contacted", followUp: "standard" },
   meeting_booked: { note: "Møte booket", status: "contacted", followUp: "none" },
 };
 
@@ -381,6 +385,68 @@ export async function enrichLead(leadId: string): Promise<EnrichResult> {
   revalidatePath("/dashboard");
 
   return { ok: true, filled, phonePending: result.phonePending, found, message };
+}
+
+export interface LeadFormState {
+  error?: string;
+  success?: string;
+}
+
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+/**
+ * Lets a seller (or admin) add a lead they sourced themselves from the /leads
+ * page. The lead is assigned to the creator and marked "Tildelt" so it lands in
+ * their own pipeline right away. Writes through the service-role client — sellers
+ * have no INSERT grant on leads (migration 0004) — after verifying the caller is
+ * an active profile. Mirrors the manual-lead insert in createMeeting.
+ */
+export async function createLead(
+  _prevState: LeadFormState | undefined,
+  formData: FormData
+): Promise<LeadFormState> {
+  const profile = await requireProfile();
+
+  const company = String(formData.get("company_name") ?? "").trim().slice(0, 200);
+  const contact = String(formData.get("contact_name") ?? "").trim().slice(0, 200) || null;
+  const email = String(formData.get("email") ?? "").trim().slice(0, 200) || null;
+  const phone = String(formData.get("phone") ?? "").trim().slice(0, 50) || null;
+  const nicheId = String(formData.get("niche_id") ?? "").trim() || null;
+
+  if (!company) return { error: "Firmanavn er påkrevd." };
+  if (email && !EMAIL_RE.test(email)) return { error: "Ugyldig e-postadresse." };
+
+  const admin = createAdminClient();
+  const { data: created, error } = await admin
+    .from("leads")
+    .insert({
+      company_name: company,
+      contact_name: contact,
+      email,
+      phone,
+      niche_id: nicheId,
+      source: "manual",
+      status: "assigned",
+      assigned_to: profile.id,
+      assigned_date: new Date().toISOString().slice(0, 10),
+    })
+    .select("id")
+    .single();
+  if (error) return { error: safeError("createLead", error) };
+
+  if (created?.id) {
+    await admin.from("lead_activities").insert({
+      lead_id: created.id,
+      seller_id: profile.id,
+      type: "note" as ActivityType,
+      content: "Lead opprettet manuelt.",
+    });
+  }
+
+  revalidatePath("/leads");
+  revalidatePath("/today");
+  revalidatePath("/dashboard");
+  return { success: `«${company}» ble lagt til i leadsene dine.` };
 }
 
 export async function addLeadActivity(

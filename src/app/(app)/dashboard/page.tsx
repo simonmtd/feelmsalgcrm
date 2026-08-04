@@ -10,7 +10,7 @@ import { StatCard } from "@/components/charts/stat-card";
 import { TrendBarChart } from "@/components/charts/trend-bar-chart";
 import { DonutChart } from "@/components/charts/donut-chart";
 import { PixelProgress } from "@/components/charts/pixel-progress";
-import { computeLeadStats, weekPoints, monthPoints, yearPoints } from "@/lib/dashboard-stats";
+import { computeLeadStats, isContacted, weekPoints, monthPoints, yearPoints } from "@/lib/dashboard-stats";
 import { formatCurrency } from "@/lib/utils";
 import { LEAD_STATUS_LABELS } from "@/lib/types";
 import type { Lead, LeadStatus, Profile } from "@/lib/types";
@@ -23,9 +23,6 @@ const STATUS_COLORS: Record<LeadStatus, string> = {
   won: "#3E8E38",
   lost: "#B4442F",
 };
-
-/** A lead counts as "followed up" once it has moved past the untouched new/assigned stages. */
-const TOUCHED_STATUSES = new Set<LeadStatus>(["contacted", "follow_up", "won", "lost"]);
 
 export default async function DashboardPage() {
   const profile = await requireProfile();
@@ -109,12 +106,13 @@ export default async function DashboardPage() {
 
   const stats = computeLeadStats(scopedLeads);
 
-  // Sellers track today's assigned leads; for an admin that set is always freshly
-  // created (and so always 0% followed up), so they get whole-portfolio progress.
-  const progressPool = isAdmin ? scopedLeads : recentLeads;
-  const followedUp = progressPool.filter((l) => TOUCHED_STATUSES.has(l.status)).length;
+  // "Kontaktet"-fremdrift over hele porteføljen (for både admin og selger), så
+  // hvert registrerte samtaleutfall — også på eldre leads — teller med her. En
+  // lead regnes som kontaktet så snart den har passert Ny/Tildelt.
+  const progressPool = scopedLeads;
+  const contactedCount = progressPool.filter((l) => isContacted(l.status)).length;
   const followUpPercent = progressPool.length
-    ? Math.round((followedUp / progressPool.length) * 100)
+    ? Math.round((contactedCount / progressPool.length) * 100)
     : 0;
 
   const startOfToday = new Date();
@@ -136,8 +134,8 @@ export default async function DashboardPage() {
       <div className="rounded-sm border-2 border-ink bg-wood-900 p-3 shadow-[4px_4px_0_0_var(--color-ink)]">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <p className="font-pixel text-[10px] uppercase leading-relaxed tracking-wide text-gold-100">
-            {isAdmin ? "Porteføljen" : "Dagens analyse"} · {followedUp}/{progressPool.length} leads
-            fulgt opp
+            {isAdmin ? "Porteføljen" : "Pipelinen din"} · {contactedCount}/{progressPool.length} leads
+            kontaktet
           </p>
           <p className="font-mono text-[11px] text-wood-200">
             {stats.openCount} åpne · {stats.winRate}% vinnrate

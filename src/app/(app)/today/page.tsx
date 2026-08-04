@@ -8,10 +8,8 @@ import { PixelProgress } from "@/components/charts/pixel-progress";
 import { LEAD_STATUS_LABELS } from "@/lib/types";
 import { LEAD_STATUS_VARIANT } from "@/lib/status-styles";
 import { formatCurrency } from "@/lib/utils";
+import { isContacted } from "@/lib/dashboard-stats";
 import type { Lead, LeadStatus } from "@/lib/types";
-
-/** A lead counts as handled once it has moved past the untouched new/assigned stages. */
-const TOUCHED_STATUSES = new Set<LeadStatus>(["contacted", "follow_up", "won", "lost"]);
 
 export default async function TodayPage() {
   const profile = await requireProfile();
@@ -26,7 +24,7 @@ export default async function TodayPage() {
     .order("created_at", { ascending: false });
 
   const leads = (data as Lead[] | null) ?? [];
-  const handled = leads.filter((l) => TOUCHED_STATUSES.has(l.status)).length;
+  const handled = leads.filter((l) => isContacted(l.status)).length;
   const percent = leads.length ? Math.round((handled / leads.length) * 100) : 0;
   const totalValue = leads.reduce((sum, l) => sum + (l.deal_size ?? 0), 0);
 
