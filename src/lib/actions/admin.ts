@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, refresh } from "next/cache";
 import { requireAdmin } from "@/lib/dal";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { safeError, throwSafe } from "@/lib/actions/errors";
@@ -446,6 +446,9 @@ export async function enrichLeadsBatch(input: {
   revalidatePath("/admin/leads");
   revalidatePath("/leads");
   revalidatePath("/today");
+  // Called programmatically from the enrich panel — refresh the client router so
+  // the updated contact info appears in the list without a manual reload.
+  refresh();
 
   const parts = Object.entries(filled).map(([k, v]) => `${v} ${k}`);
   const message = noCredits
@@ -536,6 +539,11 @@ export async function fetchApolloLeads(
   });
   revalidatePath("/admin/leads");
   revalidatePath("/dashboard");
+  // This action is called programmatically from the panel (not via a form), so
+  // revalidatePath alone doesn't reliably re-render the current view. refresh()
+  // forces the client router to re-fetch, so the freshly imported leads show up
+  // at the top of the list right away.
+  refresh();
 
   const filteredParts = [
     result.rejectedForeign ? `${result.rejectedForeign} ikke-norske` : "",
