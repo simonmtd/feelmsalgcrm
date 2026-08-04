@@ -3,6 +3,7 @@ import { Users, CalendarPlus, Wallet, Trophy, ArrowUpRight, Filter } from "lucid
 import { requireProfile } from "@/lib/dal";
 import { createClient } from "@/lib/supabase/server";
 import { NicheSwitcher } from "@/components/niche-switcher";
+import { KeepAwake } from "@/components/keep-awake";
 import { RecentLeadRow } from "@/components/dashboard/recent-lead-row";
 import { Leaderboard, type LeaderboardRow } from "@/components/dashboard/leaderboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -131,6 +132,10 @@ export default async function DashboardPage() {
 
   return (
     <>
+      <div className="flex justify-end">
+        <KeepAwake />
+      </div>
+
       <div className="rounded-sm border-2 border-ink bg-wood-900 p-3 shadow-[4px_4px_0_0_var(--color-ink)]">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <p className="font-pixel text-[10px] uppercase leading-relaxed tracking-wide text-gold-100">
