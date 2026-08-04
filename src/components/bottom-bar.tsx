@@ -22,6 +22,7 @@ const sellerShortcuts: Shortcut[] = [
 
 const adminShortcuts: Shortcut[] = [
   { href: "/dashboard", tag: "DAG", tagClass: "bg-gold-500 text-ink", label: "Dashboard" },
+  { href: "/leads", tag: "MIN", tagClass: "bg-gold-300 text-ink", label: "Mine leads" },
   { href: "/admin/leads", tag: "ALL", tagClass: "bg-forest-500 text-white", label: "Alle leads" },
   { href: "/meetings", tag: "MØT", tagClass: "bg-wood-200 text-wood-900", label: "Møter" },
   { href: "/calendar", tag: "KAL", tagClass: "bg-himmel-500 text-ink", label: "Kalender" },

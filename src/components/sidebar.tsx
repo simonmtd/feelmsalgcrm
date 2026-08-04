@@ -45,6 +45,7 @@ export function Sidebar({ profile }: { profile: Profile }) {
   const links: NavLink[] = isAdmin
     ? [
         { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { href: "/leads", label: "Mine leads", icon: ListChecks },
         { href: "/calendar", label: "Kalender", icon: CalendarDays },
         { href: "/meetings", label: "Møter", icon: Handshake },
         ...adminExtraLinks,
