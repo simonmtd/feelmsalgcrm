@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, refresh } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireProfile } from "@/lib/dal";
@@ -20,6 +20,11 @@ function revalidateMeetingViews() {
   revalidatePath("/calendar");
   revalidatePath("/meetings");
   revalidatePath("/dashboard");
+  // revalidatePath alone doesn't reliably re-render the current view after a
+  // mutation in this Next version, so a just-created/edited meeting could stay
+  // missing from the list until a manual reload. refresh() forces the client
+  // router to re-fetch so every meeting shows up right away.
+  refresh();
 }
 
 /**
