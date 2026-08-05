@@ -235,6 +235,10 @@ export async function searchApolloPeople(input: {
   /** Free-text industry/company keyword (Apollo q_keywords) to narrow the
    *  search, e.g. "eiendom". Norwegian terms work well. */
   keywords?: string;
+  /** Apollo organization keyword-TAGS (q_organization_keyword_tags) — matches the
+   *  company's industry tags, not just its name, so a niche pulls the whole
+   *  industry rather than only firms with the word in their name. */
+  keywordTags?: string[];
   /** Apollo organization_num_employees_ranges, e.g. ["11,50"]. */
   employeeRanges?: string[];
 }): Promise<{ people: ApolloProspect[] }> {
@@ -257,6 +261,7 @@ export async function searchApolloPeople(input: {
     per_page: input.perPage ?? 25,
   };
   if (input.keywords?.trim()) body.q_keywords = input.keywords.trim();
+  if (input.keywordTags?.length) body.q_organization_keyword_tags = input.keywordTags;
   if (input.employeeRanges?.length) body.organization_num_employees_ranges = input.employeeRanges;
 
   const res = await fetch(`${APOLLO_BASE}/mixed_people/api_search`, {

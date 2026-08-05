@@ -90,3 +90,39 @@ const VALID_RANGES = new Set(EMPLOYEE_RANGES.map((r) => r.value));
 export function validEmployeeRange(v: string | null | undefined): string | null {
   return v && VALID_RANGES.has(v) ? v : null;
 }
+
+/**
+ * Apollo organization keyword-tags per niche (keyed by slug). We search on the
+ * company's INDUSTRY tags, not its name — so "Fashion & klær" pulls Dressmann,
+ * Northern Playground, VILLOID etc., not only companies with "fashion" in the
+ * name. English terms match Apollo's tag vocabulary even for Norwegian firms.
+ */
+const NICHE_KEYWORD_TAGS: Record<string, string[]> = {
+  "bank-finans": ["banking", "finance", "financial services"],
+  bil: ["automotive", "car dealership"],
+  "bygg-anlegg": ["construction", "building"],
+  design: ["design", "graphic design"],
+  eiendom: ["real estate", "property"],
+  "film-produksjon": ["film production", "video production", "media production"],
+  "it-teknologi": ["information technology", "software"],
+  konsulent: ["management consulting", "consulting"],
+  "markedsf-ring-reklame": ["marketing", "advertising"],
+  "restaurant-servering": ["restaurants", "food & beverage"],
+  varehandel: ["retail", "e-commerce"],
+  "fashion-klaer": ["apparel", "fashion", "clothing"],
+};
+
+/**
+ * Best Apollo keyword-tags for a niche. Falls back to the first meaningful word
+ * of the Norwegian name when the slug isn't mapped (e.g. a niche added later),
+ * so a new niche still searches on something rather than nothing.
+ */
+export function nicheKeywordTags(slug: string, name: string): string[] {
+  const mapped = NICHE_KEYWORD_TAGS[slug];
+  if (mapped?.length) return mapped;
+  const word = name
+    .toLowerCase()
+    .split(/[^a-zæøå0-9]+/i)
+    .find((w) => w.length >= 3);
+  return word ? [word] : [];
+}

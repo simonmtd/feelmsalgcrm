@@ -12,7 +12,7 @@ import { runApolloLeadFetch } from "@/lib/jobs/fetch-apollo-leads";
 import { type LeadEnrichSnapshot } from "@/lib/apollo";
 import { ENRICH_BATCH_MAX } from "@/lib/enrichment";
 import { enrichLeadRows, type EnrichableLead } from "@/lib/jobs/enrich-leads";
-import { expandTitles, areaToLocations, validEmployeeRange } from "@/lib/prospecting";
+import { expandTitles, areaToLocations, validEmployeeRange, nicheKeywordTags } from "@/lib/prospecting";
 import type { Niche } from "@/lib/types";
 
 export interface FormActionState {
@@ -396,21 +396,6 @@ export async function enrichLeadsBatch(input: {
   return { ok: true, processed, phonePending, filled, message };
 }
 
-/**
- * Turns a niche name into a single strong search keyword for Apollo's
- * q_keywords. A multi-word phrase ("Bygg & Anlegg") over-narrows, so we drop
- * filler words (og, &, i, på) and short tokens and take the first meaningful
- * one ("bygg"). Falls back to the whole lowercased name.
- */
-function industryKeyword(name: string): string {
-  const STOP = new Set(["og", "i", "på", "for", "med", "til", "av"]);
-  const words = name
-    .toLowerCase()
-    .split(/[^a-zæøå0-9]+/i)
-    .filter((w) => w.length >= 3 && !STOP.has(w));
-  return words[0] ?? name.toLowerCase().trim();
-}
-
 export interface ApolloFetchActionResult {
   ok: boolean;
   imported: number;
@@ -443,25 +428,25 @@ export async function fetchApolloLeads(
   const actor = await requireAdmin();
   const limit = Math.max(1, Math.min(100, Math.floor(input.count ?? 25) || 0));
 
-  // If a bransje was chosen, look it up and search Apollo for that keyword,
-  // tagging every import with that niche.
-  let keywords: string | undefined;
+  // If a bransje was chosen, look it up and search Apollo on that industry's
+  // keyword-tags (not the company name), tagging every import with that niche.
+  let keywordTags: string[] | undefined;
   let validNicheId: string | null = null;
   if (input.nicheId) {
     const admin = createAdminClient();
     const { data: niche } = await admin
       .from("niches")
-      .select("id, name")
+      .select("id, name, slug")
       .eq("id", input.nicheId)
       .maybeSingle();
     if (niche) {
       validNicheId = niche.id as string;
-      keywords = industryKeyword(String(niche.name));
+      keywordTags = nicheKeywordTags(String(niche.slug), String(niche.name));
     }
   }
 
   const result = await runApolloLeadFetch(limit, {
-    keywords,
+    keywordTags,
     nicheId: validNicheId,
     titles: expandTitles(input.titleKeys ?? []),
     locations: areaToLocations(input.area),

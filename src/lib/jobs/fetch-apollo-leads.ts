@@ -76,6 +76,7 @@ export async function runApolloLeadFetch(
   limit = 25,
   opts: {
     keywords?: string;
+    keywordTags?: string[];
     nicheId?: string | null;
     titles?: string[];
     locations?: string[];
@@ -130,6 +131,7 @@ export async function runApolloLeadFetch(
         page,
         perPage: PER_PAGE,
         keywords: opts.keywords,
+        keywordTags: opts.keywordTags,
         employeeRanges: opts.employeeRanges,
       });
       if (people.length === 0) break; // no more results
