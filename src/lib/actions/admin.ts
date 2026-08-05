@@ -518,6 +518,7 @@ export async function fetchApolloLeads(
   const filteredParts = [
     result.rejectedForeign ? `${result.rejectedForeign} ikke-norske` : "",
     result.rejectedDuplicate ? `${result.rejectedDuplicate} duplikater` : "",
+    result.rejectedSameCompany ? `${result.rejectedSameCompany} fra firma vi alt har` : "",
     result.alreadyHave ? `${result.alreadyHave} alt importert` : "",
   ].filter(Boolean);
   const foreignNote = filteredParts.length ? ` (${filteredParts.join(" + ")} hoppet over)` : "";

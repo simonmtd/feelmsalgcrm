@@ -2,7 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { searchApolloPeople } from "@/lib/apollo";
 import { verifyNorwegianCompany, type BrregMatch } from "@/lib/brreg";
-import { companyTitleKey } from "@/lib/dedup";
+import { companyTitleKey, normCompany } from "@/lib/dedup";
 import { matchNiche } from "@/lib/niche-matcher";
 import type { Niche } from "@/lib/types";
 
@@ -18,6 +18,9 @@ export interface ApolloFetchResult {
   /** Apollo matches skipped because we've already imported that exact person.
    *  When this is high and imported is 0, the search pool is simply exhausted. */
   alreadyHave: number;
+  /** Candidates skipped because their company already hit the per-company cap
+   *  this run — keeps one big employer from flooding the whole import. */
+  rejectedSameCompany: number;
   /** DB ids of the leads inserted this run, so callers can auto-enrich them. */
   insertedIds: string[];
   error?: string;
@@ -26,6 +29,11 @@ export interface ApolloFetchResult {
 /** Stop scanning after this many candidates so a low match-rate run can't run
  *  past the serverless time budget (each candidate does a brreg lookup). */
 const MAX_SCAN = 250;
+
+/** Max leads to import per company per run (counting what we already have), so a
+ *  big employer like "Møller Bil" can't flood a niche with 12 of its managers —
+ *  we want a spread of different companies to call, not one company many times. */
+const MAX_PER_COMPANY = 1;
 
 /** Feelm's ideal-customer titles (decision-makers who buy video), Norway-wide. */
 const ICP_TITLES = [
@@ -75,7 +83,7 @@ export async function runApolloLeadFetch(
   } = {}
 ): Promise<ApolloFetchResult> {
   if (!process.env.APOLLO_API_KEY && process.env.DEMO_MOCK !== "1") {
-    return { ok: false, imported: 0, autoClassified: 0, scanned: 0, rejectedForeign: 0, rejectedDuplicate: 0, alreadyHave: 0, insertedIds: [], error: "APOLLO_API_KEY mangler." };
+    return { ok: false, imported: 0, autoClassified: 0, scanned: 0, rejectedForeign: 0, rejectedDuplicate: 0, rejectedSameCompany: 0, alreadyHave: 0, insertedIds: [], error: "APOLLO_API_KEY mangler." };
   }
 
   const supabase = createAdminClient();
@@ -92,10 +100,15 @@ export async function runApolloLeadFetch(
     .select("apollo_person_id, company_name, job_title");
   const seen = new Set<string>();
   const sigSeen = new Set<string>();
+  // How many leads we already have per company, so a run tops each company up to
+  // MAX_PER_COMPANY rather than re-flooding one we're already covered on.
+  const companyCount = new Map<string, number>();
   for (const r of (existingData as { apollo_person_id: string | null; company_name: string | null; job_title: string | null }[] | null) ?? []) {
     if (r.apollo_person_id) seen.add(r.apollo_person_id);
     const sig = companyTitleKey(r.company_name, r.job_title);
     if (sig) sigSeen.add(sig);
+    const ck = normCompany(r.company_name);
+    if (ck) companyCount.set(ck, (companyCount.get(ck) ?? 0) + 1);
   }
 
   let imported = 0;
@@ -103,6 +116,7 @@ export async function runApolloLeadFetch(
   let scanned = 0;
   let rejectedForeign = 0;
   let rejectedDuplicate = 0;
+  let rejectedSameCompany = 0;
   let alreadyHave = 0;
   const insertedIds: string[] = [];
   // Cache brreg lookups within a run (many rows can share a company name).
@@ -150,7 +164,17 @@ export async function runApolloLeadFetch(
           rejectedDuplicate++;
           continue;
         }
+
+        // Per-company cap: don't let one big employer (e.g. "Møller Bil") fill the
+        // import with a dozen of its managers — spread across companies instead.
+        const ckey = normCompany(p.companyName);
+        if (ckey && (companyCount.get(ckey) ?? 0) >= MAX_PER_COMPANY) {
+          rejectedSameCompany++;
+          continue;
+        }
+
         if (sig) sigSeen.add(sig);
+        if (ckey) companyCount.set(ckey, (companyCount.get(ckey) ?? 0) + 1);
 
         // When the admin picked a specific bransje we searched for it directly,
         // so tag every import with that niche. Otherwise best-effort match.
@@ -188,9 +212,9 @@ export async function runApolloLeadFetch(
       }
     }
 
-    return { ok: true, imported, autoClassified, scanned, rejectedForeign, rejectedDuplicate, alreadyHave, insertedIds };
+    return { ok: true, imported, autoClassified, scanned, rejectedForeign, rejectedDuplicate, rejectedSameCompany, alreadyHave, insertedIds };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return { ok: false, imported, autoClassified, scanned, rejectedForeign, rejectedDuplicate, alreadyHave, insertedIds, error: message };
+    return { ok: false, imported, autoClassified, scanned, rejectedForeign, rejectedDuplicate, rejectedSameCompany, alreadyHave, insertedIds, error: message };
   }
 }

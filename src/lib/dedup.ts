@@ -21,6 +21,12 @@ export function companyTitleKey(
   return `${c}|${t}`;
 }
 
+/** Normalize a company name for grouping (so "Møller Bil" collapses regardless
+ *  of casing/accents/punctuation). Returns null for blanks. */
+export function normCompany(company: string | null | undefined): string | null {
+  return norm(company) || null;
+}
+
 function norm(s: string | null | undefined): string {
   return (s ?? "")
     .toLowerCase()
