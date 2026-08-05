@@ -225,10 +225,12 @@ export async function searchApolloPeople(input: {
   const key = requireKey();
   const body: Record<string, unknown> = {
     person_titles: input.titles,
-    // person_locations filters on the PERSON's location; organization_locations
-    // on the COMPANY's HQ. Both must be Norway so we don't pull foreign
-    // companies that merely happen to have a Norway-based employee.
-    person_locations: input.locations,
+    // Filter on the COMPANY's location (HQ) only. We deliberately don't also
+    // constrain person_locations: requiring both the person AND the company to
+    // sit in the chosen area roughly halves the accessible pool (Design+Oslo:
+    // 41 vs 67), and every candidate is Brønnøysund-verified as a real
+    // Norwegian company downstream anyway — so the person-location filter just
+    // shrinks results without adding safety.
     organization_locations: input.locations,
     page: input.page,
     per_page: input.perPage ?? 25,

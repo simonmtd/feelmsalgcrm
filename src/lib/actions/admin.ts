@@ -518,8 +518,9 @@ export async function fetchApolloLeads(
   const filteredParts = [
     result.rejectedForeign ? `${result.rejectedForeign} ikke-norske` : "",
     result.rejectedDuplicate ? `${result.rejectedDuplicate} duplikater` : "",
+    result.alreadyHave ? `${result.alreadyHave} alt importert` : "",
   ].filter(Boolean);
-  const foreignNote = filteredParts.length ? ` (${filteredParts.join(" + ")} filtrert bort)` : "";
+  const foreignNote = filteredParts.length ? ` (${filteredParts.join(" + ")} hoppet over)` : "";
 
   // Suffix som forklarer berikelsen (eller at den er skrudd av).
   let enrichNote: string;
@@ -533,10 +534,16 @@ export async function fetchApolloLeads(
       (enrichLeft ? ` ${enrichLeft} gjenstår – bruk «Berik» for resten.` : "");
   }
 
+  // When nothing new came in, say WHY: an exhausted pool (all matches already
+  // imported) is very different from Apollo genuinely having no one.
+  const emptyMessage = result.alreadyHave
+    ? `Ingen nye leads – alle ${result.alreadyHave} Apollo-treffene for dette søket er allerede importert. Prøv en annen bransje eller et bredere område (f.eks. Hele Norge).`
+    : `Apollo hadde ingen treff for dette søket${foreignNote}. Prøv en annen bransje eller et bredere område.`;
+
   const message = !result.ok
     ? "Kunne ikke hente leads fra Apollo akkurat nå."
     : result.imported === 0
-      ? `Ingen nye norske leads å hente${foreignNote}.`
+      ? emptyMessage
       : `Hentet ${result.imported} nye norske leads${
           result.autoClassified ? `, ${result.autoClassified} auto-klassifisert` : ""
         }${foreignNote}.${enrichNote}`;

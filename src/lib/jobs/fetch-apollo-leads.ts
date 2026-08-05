@@ -15,6 +15,9 @@ export interface ApolloFetchResult {
   rejectedForeign: number;
   /** Candidates dropped as duplicates of a lead we already have (any source). */
   rejectedDuplicate: number;
+  /** Apollo matches skipped because we've already imported that exact person.
+   *  When this is high and imported is 0, the search pool is simply exhausted. */
+  alreadyHave: number;
   /** DB ids of the leads inserted this run, so callers can auto-enrich them. */
   insertedIds: string[];
   error?: string;
@@ -72,7 +75,7 @@ export async function runApolloLeadFetch(
   } = {}
 ): Promise<ApolloFetchResult> {
   if (!process.env.APOLLO_API_KEY && process.env.DEMO_MOCK !== "1") {
-    return { ok: false, imported: 0, autoClassified: 0, scanned: 0, rejectedForeign: 0, rejectedDuplicate: 0, insertedIds: [], error: "APOLLO_API_KEY mangler." };
+    return { ok: false, imported: 0, autoClassified: 0, scanned: 0, rejectedForeign: 0, rejectedDuplicate: 0, alreadyHave: 0, insertedIds: [], error: "APOLLO_API_KEY mangler." };
   }
 
   const supabase = createAdminClient();
@@ -100,6 +103,7 @@ export async function runApolloLeadFetch(
   let scanned = 0;
   let rejectedForeign = 0;
   let rejectedDuplicate = 0;
+  let alreadyHave = 0;
   const insertedIds: string[] = [];
   // Cache brreg lookups within a run (many rows can share a company name).
   const brregCache = new Map<string, BrregMatch | null>();
@@ -119,7 +123,10 @@ export async function runApolloLeadFetch(
       const rows = [];
       for (const p of people) {
         if (imported + rows.length >= target || scanned >= MAX_SCAN) break;
-        if (seen.has(p.apolloId)) continue;
+        if (seen.has(p.apolloId)) {
+          alreadyHave++;
+          continue; // already imported this exact person on an earlier run
+        }
         if (!p.hasEmail && !p.hasPhone) continue; // skip unreachable prospects
         seen.add(p.apolloId);
         scanned++;
@@ -181,9 +188,9 @@ export async function runApolloLeadFetch(
       }
     }
 
-    return { ok: true, imported, autoClassified, scanned, rejectedForeign, rejectedDuplicate, insertedIds };
+    return { ok: true, imported, autoClassified, scanned, rejectedForeign, rejectedDuplicate, alreadyHave, insertedIds };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return { ok: false, imported, autoClassified, scanned, rejectedForeign, rejectedDuplicate, insertedIds, error: message };
+    return { ok: false, imported, autoClassified, scanned, rejectedForeign, rejectedDuplicate, alreadyHave, insertedIds, error: message };
   }
 }
