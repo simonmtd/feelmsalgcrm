@@ -83,9 +83,30 @@ export function phoneWebhookUrl(): string | null {
   return `${base.replace(/\/$/, "")}/api/apollo/phone-webhook?secret=${encodeURIComponent(secret)}`;
 }
 
+/**
+ * Keep only Norwegian phone numbers — a foreign one (+46, +1, …) is useless to
+ * a Norwegian sales team, so we drop it rather than save it. Norwegian = a +47 /
+ * 0047 country code, or a bare 8-digit domestic number (Apollo usually returns
+ * E.164 with the country code). Returns the number untouched when Norwegian,
+ * else null.
+ */
+export function norwegianPhone(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const cleaned = raw.trim();
+  const compact = cleaned.replace(/[^\d+]/g, "");
+  if (compact.startsWith("+")) return compact.startsWith("+47") ? cleaned : null;
+  if (compact.startsWith("0047")) return cleaned;
+  if (compact.startsWith("00")) return null; // another country's code
+  return compact.replace(/\D/g, "").length === 8 ? cleaned : null;
+}
+
+/** First reachable NORWEGIAN phone on the person; skips any foreign numbers. */
 function firstPhone(person: ApolloPerson): string | null {
-  const n = person.phone_numbers?.[0];
-  return n?.sanitized_number ?? n?.raw_number ?? null;
+  for (const n of person.phone_numbers ?? []) {
+    const phone = norwegianPhone(n?.sanitized_number ?? n?.raw_number ?? null);
+    if (phone) return phone;
+  }
+  return null;
 }
 
 /**
