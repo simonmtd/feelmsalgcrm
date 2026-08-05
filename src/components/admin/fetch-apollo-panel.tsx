@@ -30,6 +30,7 @@ export function FetchApolloPanel({
   const [area, setArea] = useState("");
   const [employeeRange, setEmployeeRange] = useState("");
   const [count, setCount] = useState(25);
+  const [autoEnrich, setAutoEnrich] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
 
   function toggleTitle(key: string) {
@@ -48,8 +49,9 @@ export function FetchApolloPanel({
       <CardContent className="flex flex-col gap-4">
         <p className="text-sm text-wood-700">
           Henter ferske norske prospekter fra Apollo (Brønnøysund-sjekket). Velg
-          hvem du vil ha inn. Import koster ingen credits — kontaktinfo låses opp
-          ved «Berik».
+          hvem du vil ha inn. Selve importen er gratis. Med «Berik automatisk» på
+          låses kontaktinfo opp med én gang (~8 credits per lead, maks 25 beriket
+          per henting).
         </p>
 
         {/* Titler */}
@@ -140,6 +142,23 @@ export function FetchApolloPanel({
             />
           </div>
 
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="prospect-autoenrich">Berikelse</Label>
+            <label
+              htmlFor="prospect-autoenrich"
+              className="flex h-9 items-center gap-2 text-sm text-wood-800"
+            >
+              <input
+                id="prospect-autoenrich"
+                type="checkbox"
+                checked={autoEnrich}
+                onChange={(e) => setAutoEnrich(e.target.checked)}
+                className="h-4 w-4 accent-gold-500"
+              />
+              Berik automatisk
+            </label>
+          </div>
+
           <Button
             type="button"
             disabled={isPending}
@@ -152,12 +171,17 @@ export function FetchApolloPanel({
                   titleKeys,
                   employeeRange: employeeRange || null,
                   area: area || null,
+                  autoEnrich,
                 });
                 setMsg(res.message);
               })
             }
           >
-            {isPending ? "Henter…" : `Hent ${count} leads`}
+            {isPending
+              ? autoEnrich
+                ? "Henter & beriker…"
+                : "Henter…"
+              : `Hent ${count} leads`}
           </Button>
         </div>
 

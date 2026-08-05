@@ -9,17 +9,9 @@ import { notify } from "@/lib/notifications";
 import { runHubspotSync } from "@/lib/jobs/sync-hubspot";
 import { runDailyAssignment } from "@/lib/jobs/assign-daily-leads";
 import { runApolloLeadFetch } from "@/lib/jobs/fetch-apollo-leads";
-import {
-  enrichPerson,
-  splitName,
-  toDomain,
-  enrichmentUpdate,
-  APOLLO_NO_CREDITS,
-  type LeadEnrichSnapshot,
-} from "@/lib/apollo";
+import { type LeadEnrichSnapshot } from "@/lib/apollo";
 import { ENRICH_BATCH_MAX } from "@/lib/enrichment";
-import { matchNiche } from "@/lib/niche-matcher";
-import { normEmail } from "@/lib/dedup";
+import { enrichLeadRows, type EnrichableLead } from "@/lib/jobs/enrich-leads";
 import { expandTitles, areaToLocations, validEmployeeRange } from "@/lib/prospecting";
 import type { Niche } from "@/lib/types";
 
@@ -378,66 +370,8 @@ export async function enrichLeadsBatch(input: {
   const { data: nichesData } = await admin.from("niches").select("*");
   const niches = (nichesData as Niche[] | null) ?? [];
 
-  let processed = 0;
-  let phonePending = 0;
-  let duplicates = 0;
-  let noCredits = false;
-  const filled: Record<string, number> = {};
-
-  for (const lead of rows) {
-    try {
-      const { first, last } = splitName(lead.contact_name);
-      const result = await enrichPerson({
-        apolloId: lead.apollo_person_id,
-        firstName: first,
-        lastName: last,
-        organizationName: lead.company_name,
-        domain: toDomain(lead.website),
-        email: lead.email,
-      });
-      const { update, filled: fills } = enrichmentUpdate(lead, result);
-      update.apollo_person_id = result.apolloPersonId ?? lead.apollo_person_id;
-      update.enriched_at = new Date().toISOString();
-      if (!lead.niche_id) {
-        const niche = matchNiche(niches, {
-          company: lead.company_name ?? result.organizationName,
-          industry: lead.industry ?? result.industry,
-          website: lead.website ?? result.website,
-          title: lead.job_title ?? result.jobTitle,
-        });
-        if (niche) update.niche_id = niche.id;
-      }
-      // Cross-source dedup on a newly-revealed email.
-      const newEmail = normEmail(update.email as string | undefined);
-      if (newEmail) {
-        const { data: dup } = await admin
-          .from("leads")
-          .select("id")
-          .neq("id", lead.id)
-          .ilike("email", newEmail)
-          .is("duplicate_of", null)
-          .limit(1)
-          .maybeSingle();
-        if (dup) {
-          update.status = "lost";
-          update.duplicate_of = dup.id;
-          duplicates++;
-        }
-      }
-      await admin.from("leads").update(update).eq("id", lead.id);
-      processed++;
-      if (result.phonePending) phonePending++;
-      for (const f of fills) filled[f] = (filled[f] ?? 0) + 1;
-    } catch (err) {
-      // Out of Apollo credits: stop the whole batch (every further call fails).
-      if (err instanceof Error && err.message === APOLLO_NO_CREDITS) {
-        noCredits = true;
-        break;
-      }
-      // One bad lead shouldn't abort the whole batch.
-      console.error("[enrichLeadsBatch] lead failed", lead.id, err);
-    }
-  }
+  const { processed, phonePending, duplicates, filled, noCredits } =
+    await enrichLeadRows(admin, rows, niches);
 
   await logAudit(actor, "leads.enrich_batch", {
     details: { scope, limit, processed, phonePending },
@@ -481,13 +415,17 @@ export interface ApolloFetchActionResult {
   ok: boolean;
   imported: number;
   autoClassified: number;
+  /** How many of the imported leads got auto-enriched this run (0 if disabled). */
+  enriched: number;
   message: string;
 }
 
 /**
  * Admin-triggered version of the daily Apollo prospecting import. Pulls fresh
- * ICP-matched prospects into the pool (deduped, auto-classified). Contact info
- * stays masked until enriched — import itself spends no reveal credits.
+ * ICP-matched prospects into the pool (deduped, auto-classified). Import itself
+ * spends no credits; when `autoEnrich` is on (default) the freshly imported
+ * leads are revealed right away (~8 credits/lead, capped at ENRICH_BATCH_MAX per
+ * run so one click can't burn thousands of credits).
  */
 export interface FetchApolloInput {
   count?: number;
@@ -495,6 +433,8 @@ export interface FetchApolloInput {
   titleKeys?: string[];
   employeeRange?: string | null;
   area?: string | null;
+  /** Reveal contact info on the imported leads immediately. Defaults to true. */
+  autoEnrich?: boolean;
 }
 
 export async function fetchApolloLeads(
@@ -530,10 +470,40 @@ export async function fetchApolloLeads(
       : undefined,
   });
 
+  // Auto-berik de nyimporterte leadsene med en gang (med mindre eksplisitt av).
+  // Reveal koster ~8 credits/lead, så vi holder oss innenfor samme sikkerhets-
+  // grense som bulk-berikelsen (ENRICH_BATCH_MAX) per henting; importerer man
+  // flere, berikes de første og resten kan tas via «Berik».
+  const autoEnrich = input.autoEnrich !== false;
+  let enriched = 0;
+  let enrichPending = 0;
+  let enrichLeft = 0;
+  let enrichNoCredits = false;
+  if (autoEnrich && result.insertedIds.length > 0) {
+    const admin = createAdminClient();
+    const toEnrich = result.insertedIds.slice(0, ENRICH_BATCH_MAX);
+    enrichLeft = result.insertedIds.length - toEnrich.length;
+    const { data: rows } = await admin
+      .from("leads")
+      .select("*")
+      .in("id", toEnrich)
+      .is("phone", null);
+    const { data: nichesData } = await admin.from("niches").select("*");
+    const stats = await enrichLeadRows(
+      admin,
+      (rows ?? []) as EnrichableLead[],
+      (nichesData as Niche[] | null) ?? []
+    );
+    enriched = stats.processed;
+    enrichPending = stats.phonePending;
+    enrichNoCredits = stats.noCredits;
+  }
+
   await logAudit(actor, "leads.apollo_fetch", {
     details: {
       imported: result.imported,
       autoClassified: result.autoClassified,
+      enriched,
       nicheId: validNicheId,
     },
   });
@@ -541,8 +511,8 @@ export async function fetchApolloLeads(
   revalidatePath("/dashboard");
   // This action is called programmatically from the panel (not via a form), so
   // revalidatePath alone doesn't reliably re-render the current view. refresh()
-  // forces the client router to re-fetch, so the freshly imported leads show up
-  // at the top of the list right away.
+  // forces the client router to re-fetch, so the freshly imported (and enriched)
+  // leads show up at the top of the list right away.
   refresh();
 
   const filteredParts = [
@@ -550,18 +520,32 @@ export async function fetchApolloLeads(
     result.rejectedDuplicate ? `${result.rejectedDuplicate} duplikater` : "",
   ].filter(Boolean);
   const foreignNote = filteredParts.length ? ` (${filteredParts.join(" + ")} filtrert bort)` : "";
+
+  // Suffix som forklarer berikelsen (eller at den er skrudd av).
+  let enrichNote: string;
+  if (!autoEnrich) {
+    enrichNote = " Berik dem for å låse opp kontaktinfo.";
+  } else if (enrichNoCredits) {
+    enrichNote = ` Berikelse stoppet – Apollo er tom for credits (beriket ${enriched} før det stoppet).`;
+  } else {
+    enrichNote =
+      ` Beriket ${enriched}${enrichPending ? `, ${enrichPending} venter telefon` : ""}.` +
+      (enrichLeft ? ` ${enrichLeft} gjenstår – bruk «Berik» for resten.` : "");
+  }
+
   const message = !result.ok
     ? "Kunne ikke hente leads fra Apollo akkurat nå."
     : result.imported === 0
       ? `Ingen nye norske leads å hente${foreignNote}.`
       : `Hentet ${result.imported} nye norske leads${
           result.autoClassified ? `, ${result.autoClassified} auto-klassifisert` : ""
-        }${foreignNote}. Berik dem for å låse opp kontaktinfo.`;
+        }${foreignNote}.${enrichNote}`;
 
   return {
     ok: result.ok,
     imported: result.imported,
     autoClassified: result.autoClassified,
+    enriched,
     message,
   };
 }

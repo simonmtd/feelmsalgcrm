@@ -12,6 +12,10 @@ import { ViewToggle } from "@/components/leads/view-toggle";
 import { LEAD_STATUS_LABELS } from "@/lib/types";
 import type { Lead, LeadStatus, Niche, Profile } from "@/lib/types";
 
+// The "Hent nye leads" action can import and then auto-enrich up to 25 leads
+// (each an Apollo call), so give its Server Action the full 60s budget.
+export const maxDuration = 60;
+
 export default async function AdminLeadsPage({
   searchParams,
 }: {

@@ -15,6 +15,8 @@ export interface ApolloFetchResult {
   rejectedForeign: number;
   /** Candidates dropped as duplicates of a lead we already have (any source). */
   rejectedDuplicate: number;
+  /** DB ids of the leads inserted this run, so callers can auto-enrich them. */
+  insertedIds: string[];
   error?: string;
 }
 
@@ -70,7 +72,7 @@ export async function runApolloLeadFetch(
   } = {}
 ): Promise<ApolloFetchResult> {
   if (!process.env.APOLLO_API_KEY && process.env.DEMO_MOCK !== "1") {
-    return { ok: false, imported: 0, autoClassified: 0, scanned: 0, rejectedForeign: 0, rejectedDuplicate: 0, error: "APOLLO_API_KEY mangler." };
+    return { ok: false, imported: 0, autoClassified: 0, scanned: 0, rejectedForeign: 0, rejectedDuplicate: 0, insertedIds: [], error: "APOLLO_API_KEY mangler." };
   }
 
   const supabase = createAdminClient();
@@ -98,6 +100,7 @@ export async function runApolloLeadFetch(
   let scanned = 0;
   let rejectedForeign = 0;
   let rejectedDuplicate = 0;
+  const insertedIds: string[] = [];
   // Cache brreg lookups within a run (many rows can share a company name).
   const brregCache = new Map<string, BrregMatch | null>();
 
@@ -172,13 +175,15 @@ export async function runApolloLeadFetch(
           .insert(rows)
           .select("id");
         if (error) throw new Error(error.message);
-        imported += (inserted ?? []).length;
+        const ids = (inserted ?? []).map((r) => r.id as string);
+        imported += ids.length;
+        insertedIds.push(...ids);
       }
     }
 
-    return { ok: true, imported, autoClassified, scanned, rejectedForeign, rejectedDuplicate };
+    return { ok: true, imported, autoClassified, scanned, rejectedForeign, rejectedDuplicate, insertedIds };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return { ok: false, imported, autoClassified, scanned, rejectedForeign, rejectedDuplicate, error: message };
+    return { ok: false, imported, autoClassified, scanned, rejectedForeign, rejectedDuplicate, insertedIds, error: message };
   }
 }
