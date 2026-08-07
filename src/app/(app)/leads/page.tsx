@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { LeadCard } from "@/components/lead-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { LeadMap } from "@/components/leads/lead-map";
 import { ViewToggle } from "@/components/leads/view-toggle";
@@ -35,12 +37,14 @@ export default async function LeadsPage({
     view?: string;
     todo?: string;
     quality?: string;
+    q?: string;
   }>;
 }) {
   const profile = await requireProfile();
-  const { status, filming, view, todo, quality } = await searchParams;
+  const { status, filming, view, todo, quality, q } = await searchParams;
   const supabase = await createClient();
   const isMap = view === "map";
+  const search = (q ?? "").trim().toLowerCase();
 
   let query = supabase
     .from("leads")
@@ -78,6 +82,15 @@ export default async function LeadsPage({
     );
   }
 
+  // Free-text search across the fields a seller looks a lead up by.
+  if (search) {
+    leads = leads.filter((l) =>
+      [l.company_name, l.contact_name, l.email, l.phone]
+        .filter(Boolean)
+        .some((field) => field!.toLowerCase().includes(search))
+    );
+  }
+
   const { data: niches } = await supabase.from("niches").select("*").order("name");
 
   return (
@@ -91,7 +104,7 @@ export default async function LeadsPage({
         </div>
         <ViewToggle
           basePath="/leads"
-          params={{ status, filming, todo, quality }}
+          params={{ status, filming, todo, quality, q }}
           active={isMap ? "map" : "list"}
         />
       </div>
@@ -105,6 +118,18 @@ export default async function LeadsPage({
         <CardContent className="pt-5">
           <form method="get" className="flex flex-wrap items-end gap-3">
             {todo && <input type="hidden" name="todo" value={todo} />}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="lead-search" className="text-xs text-wood-700">
+                Søk
+              </Label>
+              <Input
+                id="lead-search"
+                name="q"
+                defaultValue={q ?? ""}
+                placeholder="Firma, kontakt, e-post eller telefon…"
+                className="w-64"
+              />
+            </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-wood-700">Status</label>
               <Select name="status" defaultValue={status ?? ""} className="w-44">
@@ -144,7 +169,9 @@ export default async function LeadsPage({
       {!leads?.length ? (
         <Card>
           <CardContent className="pt-5 text-sm text-wood-700">
-            Ingen leads matcher filteret.
+            {search
+              ? `Ingen leads matcher søket «${q}».`
+              : "Ingen leads matcher filteret."}
           </CardContent>
         </Card>
       ) : isMap ? (
