@@ -35,6 +35,11 @@ const MAX_SCAN = 250;
  *  we want a spread of different companies to call, not one company many times. */
 const MAX_PER_COMPANY = 1;
 
+/** Company-size bands to sweep when no specific size is chosen. Apollo caps a
+ *  single search at ~100 records, so querying each band separately reaches a
+ *  fresh slice of the database each time — many more new leads per run. */
+const SIZE_BUCKETS = ["1,10", "11,50", "51,200", "201,1000", "1001,5000", "5001,"];
+
 /** Feelm's ideal-customer titles (decision-makers who buy video), Norway-wide. */
 const ICP_TITLES = [
   // Toppledere
@@ -123,8 +128,17 @@ export async function runApolloLeadFetch(
   // Cache brreg lookups within a run (many rows can share a company name).
   const brregCache = new Map<string, BrregMatch | null>();
 
+  // When the admin didn't pin a company size, sweep across size buckets: Apollo
+  // caps a single query at ~100 records, so querying each band separately reaches
+  // a fresh slice of the database — far more new (unseen) companies per run.
+  const buckets = opts.employeeRanges?.length
+    ? [opts.employeeRanges]
+    : SIZE_BUCKETS.map((b) => [b]);
+  let bucketIdx = 0;
+  let page = 1;
+
   try {
-    for (let page = 1; page <= MAX_PAGES && imported < target && scanned < MAX_SCAN; page++) {
+    while (bucketIdx < buckets.length && imported < target && scanned < MAX_SCAN) {
       const { people } = await searchApolloPeople({
         titles: opts.titles?.length ? opts.titles : ICP_TITLES,
         locations: opts.locations?.length ? opts.locations : ICP_LOCATIONS,
@@ -132,9 +146,13 @@ export async function runApolloLeadFetch(
         perPage: PER_PAGE,
         keywords: opts.keywords,
         keywordTags: opts.keywordTags,
-        employeeRanges: opts.employeeRanges,
+        employeeRanges: buckets[bucketIdx],
       });
-      if (people.length === 0) break; // no more results
+      if (people.length === 0) {
+        bucketIdx++;
+        page = 1;
+        continue; // this size band is exhausted — move to the next
+      }
 
       const rows = [];
       for (const p of people) {
@@ -211,6 +229,12 @@ export async function runApolloLeadFetch(
         const ids = (inserted ?? []).map((r) => r.id as string);
         imported += ids.length;
         insertedIds.push(...ids);
+      }
+
+      page++;
+      if (page > MAX_PAGES) {
+        bucketIdx++;
+        page = 1; // exhausted this band's pages — move to the next size band
       }
     }
 
