@@ -141,6 +141,10 @@ function revalidateLeadViews() {
   revalidatePath("/admin/leads");
   revalidatePath("/leads");
   revalidatePath("/dashboard");
+  // These actions run programmatically from client components, where
+  // revalidatePath alone doesn't re-render the current view — refresh() forces
+  // the client router to re-fetch (so a reassigned lead leaves the list at once).
+  refresh();
 }
 
 export async function reassignLead(leadId: string, sellerId: string | null) {

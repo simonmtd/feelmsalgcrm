@@ -1,19 +1,30 @@
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { LeadAssignSelect } from "@/components/admin/lead-assign-select";
 import { LEAD_STATUS_VARIANT, FILMING_STATUS_VARIANT } from "@/lib/status-styles";
 import { LEAD_STATUS_LABELS, FILMING_STATUS_LABELS } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
-import type { Lead } from "@/lib/types";
+import type { Lead, Profile } from "@/lib/types";
 
-export function LeadCard({ lead }: { lead: Lead }) {
+export function LeadCard({
+  lead,
+  sellers,
+}: {
+  lead: Lead;
+  /** When provided (admin), shows a "tildel til selger"-dropdown on the card. */
+  sellers?: Pick<Profile, "id" | "full_name" | "email">[];
+}) {
   return (
-    <Link href={`/leads/${lead.id}`}>
-      <Card className="h-full transition-transform hover:-translate-y-0.5 hover:bg-gold-100">
-        <CardContent className="flex flex-col gap-2 pt-5">
+    <Card className="h-full">
+      <CardContent className="flex h-full flex-col gap-2 pt-5">
+        <Link
+          href={`/leads/${lead.id}`}
+          className="group flex flex-col gap-2 rounded-sm transition-colors hover:bg-gold-100"
+        >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-ink">
+              <p className="truncate text-sm font-semibold text-ink group-hover:underline">
                 {lead.company_name ?? "Ukjent firma"}
               </p>
               <p className="truncate text-xs text-wood-700">{lead.contact_name ?? "–"}</p>
@@ -40,8 +51,21 @@ export function LeadCard({ lead }: { lead: Lead }) {
           <p className="font-mono text-sm font-bold text-wood-900">
             {formatCurrency(lead.deal_size)}
           </p>
-        </CardContent>
-      </Card>
-    </Link>
+        </Link>
+
+        {sellers && (
+          <div className="mt-auto flex flex-col gap-1 border-t border-ink/15 pt-2">
+            <span className="text-[10px] font-medium uppercase tracking-wide text-wood-600">
+              Tildel selger
+            </span>
+            <LeadAssignSelect
+              leadId={lead.id}
+              assignedTo={lead.assigned_to}
+              sellers={sellers}
+            />
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

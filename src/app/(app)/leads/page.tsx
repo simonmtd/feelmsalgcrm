@@ -12,7 +12,7 @@ import { NewLeadForm } from "@/components/leads/new-lead-form";
 import Link from "next/link";
 import { LEAD_STATUS_LABELS, FILMING_STATUS_LABELS } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import type { Lead, LeadStatus, FilmingStatus, Niche } from "@/lib/types";
+import type { Lead, LeadStatus, FilmingStatus, Niche, Profile } from "@/lib/types";
 
 function TodoChip({ label, href, active }: { label: string; href: string; active: boolean }) {
   return (
@@ -43,6 +43,7 @@ export default async function LeadsPage({
   const profile = await requireProfile();
   const { status, filming, view, todo, quality, q } = await searchParams;
   const supabase = await createClient();
+  const isAdmin = profile.role === "admin";
   const isMap = view === "map";
   const search = (q ?? "").trim().toLowerCase();
 
@@ -92,6 +93,16 @@ export default async function LeadsPage({
   }
 
   const { data: niches } = await supabase.from("niches").select("*").order("name");
+
+  // Admins can hand their own leads over to a seller straight from the card.
+  const { data: sellersData } = isAdmin
+    ? await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .eq("is_active", true)
+        .order("full_name")
+    : { data: null };
+  const sellers = (sellersData as Pick<Profile, "id" | "full_name" | "email">[] | null) ?? [];
 
   return (
     <>
@@ -179,7 +190,7 @@ export default async function LeadsPage({
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {(leads as Lead[]).map((lead) => (
-            <LeadCard key={lead.id} lead={lead} />
+            <LeadCard key={lead.id} lead={lead} sellers={isAdmin ? sellers : undefined} />
           ))}
         </div>
       )}
