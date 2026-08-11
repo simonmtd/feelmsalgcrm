@@ -52,12 +52,15 @@ export function BulkAssignLeadsTable({
   niches,
   sellers,
   workload = {},
+  total,
 }: {
   leads: Lead[];
   niches: Niche[];
   sellers: Seller[];
   /** sellerId -> number of open leads they currently hold */
   workload?: Record<string, number>;
+  /** Total matching leads across all pages (leads is just the current page). */
+  total?: number;
 }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sellerId, setSellerId] = useState("");
@@ -120,7 +123,11 @@ export function BulkAssignLeadsTable({
     <Card>
       <CardHeader className="gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle>{leads.length} leads</CardTitle>
+          <CardTitle>
+            {total != null && total > leads.length
+              ? `${leads.length} av ${total} leads`
+              : `${leads.length} leads`}
+          </CardTitle>
           {selectedIds.size > 0 && (
             <span className="font-pixel text-[10px] uppercase tracking-wide text-forest-700">
               {selectedIds.size} valgt

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
@@ -26,12 +27,19 @@ export default async function AdminLeadsPage({
     q?: string;
     period?: string;
     quality?: string;
+    page?: string;
   }>;
 }) {
-  const { niche, status, view, q, period, quality } = await searchParams;
+  const { niche, status, view, q, period, quality, page } = await searchParams;
   const supabase = await createClient();
   const isMap = view === "map";
-  const search = (q ?? "").trim().toLowerCase();
+  const search = (q ?? "").trim();
+  // PostgREST filter values can't contain the syntax chars , ( ) * so a search
+  // term is sanitized before it goes into an .or() ilike filter (injection-safe).
+  const safeSearch = search.replace(/[^0-9a-zæøåäöü@.\- ]/gi, "").trim();
+
+  const PAGE_SIZE = 200;
+  const pageNum = Math.max(1, Math.floor(Number(page) || 1));
 
   // Start of the selected period (local time), for the "new leads" filter.
   let periodStart: string | null = null;
@@ -86,24 +94,40 @@ export default async function AdminLeadsPage({
 
   let query = supabase
     .from("leads")
-    .select("*, niche:niches(*)")
-    .order("created_at", { ascending: false })
-    .limit(200);
+    .select("*, niche:niches(*)", { count: "exact" })
+    .order("created_at", { ascending: false });
 
   if (niche === "unclassified") query = query.is("niche_id", null);
   else if (niche) query = query.eq("niche_id", niche);
   if (status) query = query.eq("status", status as LeadStatus);
   if (periodStart) query = query.gte("created_at", periodStart);
   if (quality === "phone") query = query.not("phone", "is", null);
+  // Search runs in the DB (across ALL leads, not just one page).
+  if (safeSearch) {
+    query = query.or(
+      `company_name.ilike.*${safeSearch}*,contact_name.ilike.*${safeSearch}*,email.ilike.*${safeSearch}*`
+    );
+  }
 
-  const { data: leadsRaw } = await query;
-  const leads = search
-    ? ((leadsRaw as Lead[] | null) ?? []).filter((l) =>
-        [l.company_name, l.contact_name, l.email]
-          .filter(Boolean)
-          .some((field) => field!.toLowerCase().includes(search))
-      )
-    : (leadsRaw as Lead[] | null) ?? [];
+  const from = (pageNum - 1) * PAGE_SIZE;
+  const { data: leadsRaw, count } = await query.range(from, from + PAGE_SIZE - 1);
+  const leads = (leadsRaw as Lead[] | null) ?? [];
+  const total = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const rangeFrom = total === 0 ? 0 : from + 1;
+  const rangeTo = from + leads.length;
+
+  const pageHref = (p: number) => {
+    const params = new URLSearchParams();
+    if (niche) params.set("niche", niche);
+    if (status) params.set("status", status);
+    if (q) params.set("q", q);
+    if (period) params.set("period", period);
+    if (quality) params.set("quality", quality);
+    if (p > 1) params.set("page", String(p));
+    const qs = params.toString();
+    return qs ? `/admin/leads?${qs}` : "/admin/leads";
+  };
 
   return (
     <>
@@ -192,12 +216,39 @@ export default async function AdminLeadsPage({
           niches={(niches as Niche[]) ?? []}
         />
       ) : (
-        <BulkAssignLeadsTable
-          leads={(leads as Lead[]) ?? []}
-          niches={(niches as Niche[]) ?? []}
-          sellers={(sellers as Pick<Profile, "id" | "full_name" | "email">[]) ?? []}
-          workload={workload}
-        />
+        <>
+          <BulkAssignLeadsTable
+            leads={(leads as Lead[]) ?? []}
+            niches={(niches as Niche[]) ?? []}
+            sellers={(sellers as Pick<Profile, "id" | "full_name" | "email">[]) ?? []}
+            workload={workload}
+            total={total}
+          />
+
+          {totalPages > 1 && (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="font-mono text-xs text-wood-700">
+                Viser {rangeFrom}–{rangeTo} av {total} leads · side {pageNum} av {totalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                {pageNum > 1 ? (
+                  <Link href={pageHref(pageNum - 1)}>
+                    <Button variant="outline" size="sm">← Forrige</Button>
+                  </Link>
+                ) : (
+                  <Button variant="outline" size="sm" disabled>← Forrige</Button>
+                )}
+                {pageNum < totalPages ? (
+                  <Link href={pageHref(pageNum + 1)}>
+                    <Button variant="outline" size="sm">Neste →</Button>
+                  </Link>
+                ) : (
+                  <Button variant="outline" size="sm" disabled>Neste →</Button>
+                )}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </>
   );
