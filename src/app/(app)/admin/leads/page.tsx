@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { TriggerAssignmentButton } from "@/components/admin/trigger-assignment-button";
 import { FetchApolloPanel } from "@/components/admin/fetch-apollo-panel";
+import { ImportLeadsPanel } from "@/components/admin/import-leads-panel";
 import { EnrichBatchPanel } from "@/components/admin/enrich-batch-panel";
 import { BulkAssignLeadsTable } from "@/components/admin/bulk-assign-leads-table";
 import { LeadMap } from "@/components/leads/lead-map";
@@ -141,6 +142,8 @@ export default async function AdminLeadsPage({
       </div>
 
       <FetchApolloPanel niches={(niches as Niche[] | null) ?? []} />
+
+      <ImportLeadsPanel />
 
       <EnrichBatchPanel
         missingAll={missingAll ?? 0}

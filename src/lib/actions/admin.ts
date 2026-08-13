@@ -9,10 +9,12 @@ import { notify } from "@/lib/notifications";
 import { runHubspotSync } from "@/lib/jobs/sync-hubspot";
 import { runDailyAssignment } from "@/lib/jobs/assign-daily-leads";
 import { runApolloLeadFetch } from "@/lib/jobs/fetch-apollo-leads";
-import { type LeadEnrichSnapshot } from "@/lib/apollo";
+import { type LeadEnrichSnapshot, norwegianPhone } from "@/lib/apollo";
 import { ENRICH_BATCH_MAX } from "@/lib/enrichment";
 import { enrichLeadRows, type EnrichableLead } from "@/lib/jobs/enrich-leads";
 import { expandTitles, areaToLocations, validEmployeeRange, nicheKeywordTags } from "@/lib/prospecting";
+import { matchNiche } from "@/lib/niche-matcher";
+import { normEmail, companyTitleKey } from "@/lib/dedup";
 import type { Niche } from "@/lib/types";
 
 export interface FormActionState {
@@ -545,4 +547,141 @@ export async function fetchApolloLeads(
     enriched,
     message,
   };
+}
+
+export interface ImportLeadRow {
+  company_name?: string | null;
+  contact_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  industry?: string | null;
+  job_title?: string | null;
+  apollo_person_id?: string | null;
+}
+
+export interface ImportLeadsResult {
+  ok: boolean;
+  imported: number;
+  skipped: number;
+  message: string;
+}
+
+/** Max rows processed per CSV import — keeps the insert + payload bounded. */
+const IMPORT_MAX = 2000;
+
+function cleanField(v: string | null | undefined, max = 300): string | null {
+  const t = (v ?? "").trim();
+  return t ? t.slice(0, max) : null;
+}
+
+/**
+ * Imports already-enriched leads from an Apollo.io CSV export (parsed to rows on
+ * the client). Contact info (phone/email/company/title) comes straight from the
+ * file — no Apollo credits spent. Foreign phone numbers are dropped, leads are
+ * deduped against what we already have (Apollo id / email / company+role), and
+ * each gets an auto-matched niche. Imported into the unassigned pool as `new`
+ * so the admin distributes them with the normal bulk-assign flow.
+ */
+export async function importApolloLeads(
+  rows: ImportLeadRow[]
+): Promise<ImportLeadsResult> {
+  const actor = await requireAdmin();
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return { ok: false, imported: 0, skipped: 0, message: "Fant ingen rader i filen." };
+  }
+  const capped = rows.slice(0, IMPORT_MAX);
+  const admin = createAdminClient();
+
+  // Dedup against existing leads (any source) on Apollo id, email, or company+role.
+  const { data: existing } = await admin
+    .from("leads")
+    .select("apollo_person_id, email, company_name, job_title");
+  const seenApollo = new Set<string>();
+  const seenEmail = new Set<string>();
+  const sigSeen = new Set<string>();
+  for (const r of (existing as {
+    apollo_person_id: string | null;
+    email: string | null;
+    company_name: string | null;
+    job_title: string | null;
+  }[] | null) ?? []) {
+    if (r.apollo_person_id) seenApollo.add(r.apollo_person_id);
+    const e = normEmail(r.email);
+    if (e) seenEmail.add(e);
+    const sig = companyTitleKey(r.company_name, r.job_title);
+    if (sig) sigSeen.add(sig);
+  }
+
+  const { data: nichesData } = await admin.from("niches").select("*");
+  const niches = (nichesData as Niche[] | null) ?? [];
+
+  const toInsert: Record<string, unknown>[] = [];
+  let skipped = 0;
+  for (const row of capped) {
+    const company = cleanField(row.company_name, 200);
+    const contact = cleanField(row.contact_name, 200);
+    if (!company && !contact) {
+      skipped++;
+      continue; // an empty row
+    }
+    const email = normEmail(row.email);
+    const apolloId = cleanField(row.apollo_person_id, 100);
+    const jobTitle = cleanField(row.job_title, 200);
+    const sig = companyTitleKey(company, jobTitle);
+
+    const isDup =
+      (apolloId && seenApollo.has(apolloId)) ||
+      (email && seenEmail.has(email)) ||
+      (sig && sigSeen.has(sig));
+    if (isDup) {
+      skipped++;
+      continue;
+    }
+    // Reserve within this batch too, so a file with internal duplicates dedups.
+    if (apolloId) seenApollo.add(apolloId);
+    if (email) seenEmail.add(email);
+    if (sig) sigSeen.add(sig);
+
+    const website = cleanField(row.website, 300);
+    const industry = cleanField(row.industry, 120);
+    const niche = matchNiche(niches, { company, industry, website, title: jobTitle });
+
+    toInsert.push({
+      company_name: company,
+      contact_name: contact,
+      email,
+      phone: norwegianPhone(row.phone),
+      website,
+      industry,
+      job_title: jobTitle,
+      apollo_person_id: apolloId,
+      niche_id: niche?.id ?? null,
+      source: "apollo",
+      status: "new",
+      enriched_at: new Date().toISOString(),
+    });
+  }
+
+  let imported = 0;
+  for (let i = 0; i < toInsert.length; i += 500) {
+    const chunk = toInsert.slice(i, i + 500);
+    const { data, error } = await admin.from("leads").insert(chunk).select("id");
+    if (error) {
+      return { ok: false, imported, skipped, message: safeError("importApolloLeads", error) };
+    }
+    imported += (data ?? []).length;
+  }
+
+  await logAudit(actor, "leads.import_csv", { details: { imported, skipped } });
+  revalidatePath("/admin/leads");
+  revalidatePath("/dashboard");
+  refresh();
+
+  const truncated =
+    rows.length > IMPORT_MAX ? ` (kun de første ${IMPORT_MAX} av ${rows.length} rader ble behandlet)` : "";
+  const message = imported
+    ? `Importerte ${imported} nye leads${skipped ? `, hoppet over ${skipped} duplikater/tomme` : ""}${truncated}.`
+    : `Ingen nye leads – ${skipped} var duplikater eller tomme${truncated}.`;
+  return { ok: true, imported, skipped, message };
 }
