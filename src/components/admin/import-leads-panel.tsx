@@ -69,17 +69,37 @@ function mapRows(table: string[][]): { rows: ImportLeadRow[]; recognized: boolea
   if (table.length < 2) return { rows: [], recognized: false };
   const header = table[0].map((h) => h.trim().toLowerCase());
   const gi = (name: string) => header.indexOf(name);
-  const recognized = header.includes("company") || header.includes("email") || header.includes("first name");
+  // First matching header among several candidate names (Apollo naming varies).
+  const giAny = (...names: string[]) => {
+    for (const n of names) {
+      const i = header.indexOf(n);
+      if (i >= 0) return i;
+    }
+    return -1;
+  };
+  const recognized =
+    header.includes("email") ||
+    header.includes("first name") ||
+    header.some((h) => h.includes("company"));
 
   const iFirst = gi("first name");
   const iLast = gi("last name");
   const iName = gi("name");
-  const iCompany = gi("company");
-  const iEmail = gi("email");
-  const iTitle = gi("title");
-  const iWebsite = gi("website");
+  const iCompany = giAny(
+    "company",
+    "company name for emails",
+    "company name",
+    "account name",
+    "account",
+    "organization name",
+    "organization",
+    "employer"
+  );
+  const iEmail = giAny("email", "primary email", "email address");
+  const iTitle = giAny("title", "job title");
+  const iWebsite = giAny("website", "company website", "website url");
   const iIndustry = gi("industry");
-  const iApollo = gi("apollo contact id");
+  const iApollo = giAny("apollo contact id", "contact id");
   const phoneIdxs = PHONE_KEYS.map(gi).filter((i) => i >= 0);
 
   const rows = table
@@ -183,6 +203,28 @@ export function ImportLeadsPanel() {
             </Button>
           )}
         </div>
+
+        {rows.length > 0 && (
+          <div className="rounded-sm border-2 border-ink/20 bg-parchment/60 p-3 text-xs text-wood-800">
+            <p className="mb-1 font-medium">
+              Forhåndsvisning ({rows.filter((r) => r.company_name).length} av {rows.length} har
+              firmanavn):
+            </p>
+            <ul className="flex flex-col gap-0.5 font-mono">
+              {rows.slice(0, 3).map((r, i) => (
+                <li key={i}>
+                  {r.company_name || "⚠️ (mangler firma)"} · {r.contact_name || "–"} ·{" "}
+                  {r.phone || "–"}
+                </li>
+              ))}
+            </ul>
+            {rows.filter((r) => r.company_name).length === 0 && (
+              <p className="mt-1 text-red-600">
+                Fant ingen firmanavn – si ifra hvilken kolonne firmaet står i, så mapper jeg den.
+              </p>
+            )}
+          </div>
+        )}
 
         {error && <p className="text-sm text-red-600">{error}</p>}
         {msg && <p className="text-sm text-forest-700">{msg}</p>}

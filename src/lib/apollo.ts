@@ -92,7 +92,8 @@ export function phoneWebhookUrl(): string | null {
  */
 export function norwegianPhone(raw: string | null | undefined): string | null {
   if (!raw) return null;
-  const cleaned = raw.trim();
+  // Excel/CSV exports prefix numbers with '/="/" to force text — strip those.
+  const cleaned = raw.trim().replace(/^[='"\s]+/, "").replace(/["']+$/, "").trim();
   const compact = cleaned.replace(/[^\d+]/g, "");
   if (compact.startsWith("+")) return compact.startsWith("+47") ? cleaned : null;
   if (compact.startsWith("0047")) return cleaned;
