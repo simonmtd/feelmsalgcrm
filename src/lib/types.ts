@@ -181,6 +181,31 @@ export const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
   filming_update: "Filming-oppdatering",
 };
 
+export type CallOutcomeKey =
+  | "no_answer"
+  | "voicemail"
+  | "not_interested"
+  | "interested"
+  | "meeting_booked";
+
+export const CALL_OUTCOME_LABELS: Record<CallOutcomeKey, string> = {
+  no_answer: "Ikke svar",
+  voicemail: "La igjen beskjed",
+  interested: "Interessert",
+  meeting_booked: "Møte booket",
+  not_interested: "Ikke interessert",
+};
+
+export interface CallLog {
+  id: string;
+  seller_id: string;
+  lead_id: string | null;
+  company_name: string | null;
+  phone: string | null;
+  outcome: string | null;
+  created_at: string;
+}
+
 export const MEETING_TYPE_LABELS: Record<MeetingType, string> = {
   sales_meeting: "Salgsmøte",
   demo: "Demo",

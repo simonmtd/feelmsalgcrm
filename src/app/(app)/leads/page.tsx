@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { LeadMap } from "@/components/leads/lead-map";
 import { ViewToggle } from "@/components/leads/view-toggle";
 import { NewLeadForm } from "@/components/leads/new-lead-form";
+import { LogCallForm } from "@/components/leads/log-call-form";
 import Link from "next/link";
 import { LEAD_STATUS_LABELS, FILMING_STATUS_LABELS } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -124,6 +125,8 @@ export default async function LeadsPage({
         niches={(niches as Niche[]) ?? []}
         defaultNicheId={profile.active_niche_id}
       />
+
+      <LogCallForm />
 
       <Card>
         <CardContent className="pt-5">

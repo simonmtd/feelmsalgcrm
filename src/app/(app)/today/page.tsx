@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TodayLeadCard } from "@/components/leads/today-lead-card";
+import { LogCallForm } from "@/components/leads/log-call-form";
 import { PixelProgress } from "@/components/charts/pixel-progress";
 import { LEAD_STATUS_LABELS } from "@/lib/types";
 import { LEAD_STATUS_VARIANT } from "@/lib/status-styles";
@@ -62,6 +63,8 @@ export default async function TodayPage() {
           ))}
         </div>
       )}
+
+      <LogCallForm />
 
       {!leads.length ? (
         <Card>

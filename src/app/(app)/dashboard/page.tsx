@@ -6,6 +6,7 @@ import { NicheSwitcher } from "@/components/niche-switcher";
 import { KeepAwake } from "@/components/keep-awake";
 import { RecentLeadRow } from "@/components/dashboard/recent-lead-row";
 import { Leaderboard, type LeaderboardRow } from "@/components/dashboard/leaderboard";
+import { TeamActivityStats } from "@/components/dashboard/team-activity-stats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/charts/stat-card";
 import { TrendBarChart } from "@/components/charts/trend-bar-chart";
@@ -34,8 +35,10 @@ export default async function DashboardPage() {
 
   // Team leaderboard: meetings booked + signed value per seller. Everyone can
   // see it (meetings are team-visible), so it renders for admins and sellers.
-  const [{ data: allMeetings }, { data: teamRows }] = await Promise.all([
-    supabase.from("meetings").select("seller_id, deal_size, signed, type"),
+  const callsSince = new Date();
+  callsSince.setDate(callsSince.getDate() - 366);
+  const [{ data: allMeetings }, { data: teamRows }, { data: callLogsData }] = await Promise.all([
+    supabase.from("meetings").select("seller_id, deal_size, signed, signed_at, type, created_at"),
     // All active team members, incl. admins who also sell (e.g. Tobias). We keep
     // sellers always, and admins only when they've actually booked a meeting, so
     // pure-admin accounts don't clutter the board.
@@ -43,9 +46,25 @@ export default async function DashboardPage() {
       .from("profiles")
       .select("id, full_name, email, role")
       .eq("is_active", true),
+    // Call activity for the stats (bounded to a year so a year average works).
+    // Returns [] if the call_logs table isn't set up yet, so the page won't break.
+    supabase
+      .from("call_logs")
+      .select("seller_id, created_at")
+      .gte("created_at", callsSince.toISOString()),
   ]);
   const meetingRows =
-    (allMeetings as { seller_id: string; deal_size: number | null; signed: boolean; type: string }[] | null) ?? [];
+    (allMeetings as {
+      seller_id: string;
+      deal_size: number | null;
+      signed: boolean;
+      signed_at: string | null;
+      type: string;
+      created_at: string;
+    }[] | null) ?? [];
+  const callLogs = (callLogsData as { seller_id: string; created_at: string }[] | null) ?? [];
+  const teamMembers = (teamRows as Pick<Profile, "id" | "full_name" | "email" | "role">[] | null) ?? [];
+  const statsSellers = teamMembers.map((s) => ({ id: s.id, name: s.full_name ?? s.email }));
   const leaderboard: LeaderboardRow[] = (
     (teamRows as Pick<Profile, "id" | "full_name" | "email" | "role">[] | null) ?? []
   )
@@ -255,6 +274,8 @@ export default async function DashboardPage() {
       </div>
 
       <Leaderboard rows={leaderboard} />
+
+      <TeamActivityStats sellers={statsSellers} callLogs={callLogs} meetings={meetingRows} />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">

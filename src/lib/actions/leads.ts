@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, refresh } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireProfile } from "@/lib/dal";
@@ -13,6 +13,7 @@ import {
   LEAD_STATUS_LABELS,
   FILMING_STATUS_LABELS,
   ACTIVITY_TYPE_LABELS,
+  CALL_OUTCOME_LABELS,
 } from "@/lib/types";
 import type { ActivityType, FilmingStatus, LeadStatus } from "@/lib/types";
 
@@ -209,10 +210,67 @@ export async function logCallOutcome(leadId: string, outcome: CallOutcome) {
     .eq("id", leadId);
   if (error) throwSafe("logCallOutcome", error);
 
+  // Track the call for the dashboard activity/hit-rate stats.
+  const { data: leadInfo } = await supabase
+    .from("leads")
+    .select("company_name, phone")
+    .eq("id", leadId)
+    .maybeSingle();
+  await supabase.from("call_logs").insert({
+    seller_id: profile.id,
+    lead_id: leadId,
+    company_name: leadInfo?.company_name ?? null,
+    phone: leadInfo?.phone ?? null,
+    outcome,
+  });
+
   revalidatePath(`/leads/${leadId}`);
   revalidatePath("/leads");
   revalidatePath("/today");
   revalidatePath("/dashboard");
+  refresh();
+}
+
+export interface CallFormState {
+  error?: string;
+  success?: string;
+}
+
+/**
+ * Logs a cold call to a company that isn't in the lead list — the seller types
+ * the number and company, and it's tracked the same way as a lead call so it
+ * counts toward their activity/hit-rate stats.
+ */
+export async function logManualCall(
+  _prevState: CallFormState | undefined,
+  formData: FormData
+): Promise<CallFormState> {
+  const profile = await requireProfile();
+  const supabase = await createClient();
+
+  const phone = String(formData.get("phone") ?? "").trim().slice(0, 40);
+  const company = String(formData.get("company") ?? "").trim().slice(0, 200);
+  const outcomeRaw = String(formData.get("outcome") ?? "").trim();
+  const outcome = (CALL_OUTCOME_LABELS as Record<string, string>)[outcomeRaw] ? outcomeRaw : null;
+
+  if (!phone && !company) {
+    return { error: "Fyll inn telefonnummer eller bedrift." };
+  }
+
+  const { error } = await supabase.from("call_logs").insert({
+    seller_id: profile.id,
+    lead_id: null,
+    company_name: company || null,
+    phone: phone || null,
+    outcome,
+  });
+  if (error) return { error: safeError("logManualCall", error) };
+
+  revalidatePath("/dashboard");
+  revalidatePath("/leads");
+  revalidatePath("/today");
+  refresh();
+  return { success: `Samtale registrert${company ? ` – ${company}` : ""}.` };
 }
 
 export interface LeadContactFields {
