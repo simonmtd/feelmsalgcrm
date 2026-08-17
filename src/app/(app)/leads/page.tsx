@@ -82,6 +82,24 @@ export default async function LeadsPage({
         l.assigned_date != null &&
         l.assigned_date <= cutoffStr
     );
+  } else if (todo === "no_answer") {
+    // Leads to ring back: the most recent registered call was "ikke svar" and
+    // the lead is still open. Latest outcome wins, so a later successful call
+    // takes it off the list.
+    const { data: calls } = await supabase
+      .from("call_logs")
+      .select("lead_id, outcome, created_at")
+      .eq("seller_id", profile.id)
+      .not("lead_id", "is", null)
+      .order("created_at", { ascending: false });
+    const latestOutcome = new Map<string, string | null>();
+    for (const c of (calls as { lead_id: string | null; outcome: string | null }[] | null) ?? []) {
+      if (c.lead_id && !latestOutcome.has(c.lead_id)) latestOutcome.set(c.lead_id, c.outcome);
+    }
+    leads = leads.filter(
+      (l) =>
+        latestOutcome.get(l.id) === "no_answer" && l.status !== "won" && l.status !== "lost"
+    );
   }
 
   // Free-text search across the fields a seller looks a lead up by.
@@ -111,6 +129,7 @@ export default async function LeadsPage({
         <div className="flex flex-wrap gap-1.5">
           <TodoChip label="Alle" href="/leads" active={!todo} />
           <TodoChip label="Ikke kontaktet" href="/leads?todo=uncontacted" active={todo === "uncontacted"} />
+          <TodoChip label="Ikke svar" href="/leads?todo=no_answer" active={todo === "no_answer"} />
           <TodoChip label="Forfalt oppfølging" href="/leads?todo=overdue" active={todo === "overdue"} />
           <TodoChip label="Glemt (3d+)" href="/leads?todo=stale" active={todo === "stale"} />
         </div>
