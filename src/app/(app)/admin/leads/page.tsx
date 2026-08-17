@@ -65,7 +65,7 @@ export default async function AdminLeadsPage({
     // Everyone active can receive leads — incl. admins who also sell (Tobias).
     supabase
       .from("profiles")
-      .select("id, full_name, email")
+      .select("id, full_name, email, role")
       .eq("is_active", true)
       .order("full_name"),
     // Current workload per assignee: open (not won/lost) assigned leads.
@@ -223,7 +223,7 @@ export default async function AdminLeadsPage({
           <BulkAssignLeadsTable
             leads={(leads as Lead[]) ?? []}
             niches={(niches as Niche[]) ?? []}
-            sellers={(sellers as Pick<Profile, "id" | "full_name" | "email">[]) ?? []}
+            sellers={(sellers as Pick<Profile, "id" | "full_name" | "email" | "role">[]) ?? []}
             workload={workload}
             total={total}
           />

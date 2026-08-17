@@ -13,7 +13,7 @@ import { LEAD_STATUS_VARIANT } from "@/lib/status-styles";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import type { Lead, Niche, Profile } from "@/lib/types";
 
-type Seller = Pick<Profile, "id" | "full_name" | "email">;
+type Seller = Pick<Profile, "id" | "full_name" | "email" | "role">;
 
 function Checkbox({
   checked,
@@ -103,16 +103,24 @@ export function BulkAssignLeadsTable({
     });
   }
 
+  // "Fordel jevnt" spreads only across actual sellers — admins can still be
+  // picked manually per row, but they're not part of the even-distribution pool.
+  const distributionSellers = sellers.filter((s) => s.role === "seller");
+
   function handleDistribute() {
     const ids = [...selectedIds];
+    if (distributionSellers.length === 0) {
+      setMessage("Ingen selgere å fordele til.");
+      return;
+    }
     startTransition(async () => {
-      const result = await distributeLeadsEvenly(ids, sellers.map((s) => s.id));
+      const result = await distributeLeadsEvenly(ids, distributionSellers.map((s) => s.id));
       if (result.error) {
         setMessage(result.error);
         return;
       }
       setMessage(
-        `${result.assigned} ${result.assigned === 1 ? "lead" : "leads"} fordelt jevnt på ${sellers.length} selgere.`
+        `${result.assigned} ${result.assigned === 1 ? "lead" : "leads"} fordelt jevnt på ${distributionSellers.length} selgere.`
       );
       setSelectedIds(new Set());
       setSellerId("");
