@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { Mail } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LeadAssignSelect } from "@/components/admin/lead-assign-select";
+import { CallOutcomeButtons } from "@/components/leads/call-outcome-buttons";
 import { LEAD_STATUS_VARIANT, FILMING_STATUS_VARIANT } from "@/lib/status-styles";
 import { LEAD_STATUS_LABELS, FILMING_STATUS_LABELS } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
@@ -42,19 +44,26 @@ export function LeadCard({
             <Badge variant={FILMING_STATUS_VARIANT[lead.filming_status]}>
               {FILMING_STATUS_LABELS[lead.filming_status]}
             </Badge>
-            {!lead.phone && (
-              <Badge variant="red" title="Mangler telefonnummer">
-                Mangler tlf
-              </Badge>
-            )}
           </div>
-          <p className="font-mono text-sm font-bold text-wood-900">
-            {formatCurrency(lead.deal_size)}
-          </p>
+          {lead.email && (
+            <p className="flex items-center gap-1.5 truncate text-xs text-wood-700">
+              <Mail className="h-3 w-3 shrink-0" /> {lead.email}
+            </p>
+          )}
+          {lead.deal_size != null && (
+            <p className="font-mono text-sm font-bold text-wood-900">
+              {formatCurrency(lead.deal_size)}
+            </p>
+          )}
         </Link>
 
+        {/* Call + log an outcome straight from the card. */}
+        <div className="mt-auto border-t border-ink/15 pt-2">
+          <CallOutcomeButtons leadId={lead.id} phone={lead.phone} />
+        </div>
+
         {sellers && (
-          <div className="mt-auto flex flex-col gap-1 border-t border-ink/15 pt-2">
+          <div className="flex flex-col gap-1 border-t border-ink/15 pt-2">
             <span className="text-[10px] font-medium uppercase tracking-wide text-wood-600">
               Tildel selger
             </span>
