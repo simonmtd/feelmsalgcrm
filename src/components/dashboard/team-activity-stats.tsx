@@ -22,13 +22,29 @@ interface SellerRow {
 }
 
 const PERIODS = [
-  { key: "day", label: "I dag", days: 1 },
-  { key: "week", label: "Uke", days: 7 },
-  { key: "month", label: "Måned", days: 30 },
-  { key: "year", label: "År", days: 365 },
+  { key: "day", label: "I dag" },
+  { key: "week", label: "Uke" },
+  { key: "month", label: "Måned" },
+  { key: "year", label: "År" },
 ] as const;
 
 type PeriodKey = (typeof PERIODS)[number]["key"];
+
+/** Start of the chosen calendar period (local time). "I dag" = since midnight
+ *  today, so yesterday's calls drop out of today but stay in week/month/year. */
+function periodStart(nowMs: number, key: PeriodKey): number {
+  const d = new Date(nowMs);
+  d.setHours(0, 0, 0, 0);
+  if (key === "week") {
+    const mondayOffset = (d.getDay() + 6) % 7; // Mon = 0 … Sun = 6
+    d.setDate(d.getDate() - mondayOffset);
+  } else if (key === "month") {
+    d.setDate(1);
+  } else if (key === "year") {
+    d.setMonth(0, 1);
+  }
+  return d.getTime();
+}
 
 /**
  * Team activity & hit-rate: how many calls each person made in the chosen
@@ -44,10 +60,11 @@ export function TeamActivityStats({
   callLogs: CallRow[];
   meetings: MeetingRow[];
 }) {
-  const [periodKey, setPeriodKey] = useState<PeriodKey>("week");
+  const [periodKey, setPeriodKey] = useState<PeriodKey>("day");
   const [now] = useState(() => Date.now());
-  const period = PERIODS.find((p) => p.key === periodKey) ?? PERIODS[1];
-  const start = now - period.days * 86_400_000;
+  const start = periodStart(now, periodKey);
+  // Days elapsed in the current period so far (for the daily average).
+  const daysElapsed = Math.max(1, Math.ceil((now - start) / 86_400_000));
 
   const rows = useMemo(() => {
     const inWindow = (iso: string | null) => iso != null && new Date(iso).getTime() >= start;
@@ -61,7 +78,7 @@ export function TeamActivityStats({
           id: s.id,
           name: s.name,
           calls,
-          perDay: calls / period.days,
+          perDay: calls / daysElapsed,
           booked,
           signed,
           meetRate: calls ? Math.round((booked / calls) * 100) : 0,
@@ -70,7 +87,7 @@ export function TeamActivityStats({
       })
       .filter((r) => r.calls > 0 || r.booked > 0 || r.signed > 0)
       .sort((a, b) => b.calls - a.calls || b.signed - a.signed);
-  }, [sellers, callLogs, meetings, start, period.days]);
+  }, [sellers, callLogs, meetings, start, daysElapsed]);
 
   const totalCalls = rows.reduce((s, r) => s + r.calls, 0);
   const totalBooked = rows.reduce((s, r) => s + r.booked, 0);
@@ -136,7 +153,7 @@ export function TeamActivityStats({
                 <td className="py-2 pr-4">Totalt</td>
                 <td className="py-2 pr-4 text-right font-mono">{totalCalls}</td>
                 <td className="py-2 pr-4 text-right font-mono text-wood-700">
-                  {(totalCalls / period.days).toFixed(1)}
+                  {(totalCalls / daysElapsed).toFixed(1)}
                 </td>
                 <td className="py-2 pr-4 text-right font-mono">{totalBooked}</td>
                 <td className="py-2 pr-4 text-right font-mono">{totalSigned}</td>
