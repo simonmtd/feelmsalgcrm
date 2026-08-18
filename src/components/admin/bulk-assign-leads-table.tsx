@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -66,6 +66,26 @@ export function BulkAssignLeadsTable({
   const [sellerId, setSellerId] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // After a CSV import, the import panel stashes the new lead ids and refreshes;
+  // pick them up here and pre-select them so the admin can distribute right away.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = window.sessionStorage.getItem("importedLeadIds");
+    if (!raw) return;
+    window.sessionStorage.removeItem("importedLeadIds");
+    try {
+      const ids = JSON.parse(raw) as string[];
+      const present = new Set(leads.map((l) => l.id));
+      const toSelect = ids.filter((id) => present.has(id));
+      // One-time sync from the import panel's sessionStorage handoff — runs once
+      // (we cleared the key above), so there's no cascading-render concern.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (toSelect.length) setSelectedIds(new Set(toSelect));
+    } catch {
+      // ignore malformed handoff
+    }
+  }, [leads]);
 
   const allSelected = leads.length > 0 && selectedIds.size === leads.length;
   const someSelected = selectedIds.size > 0 && !allSelected;

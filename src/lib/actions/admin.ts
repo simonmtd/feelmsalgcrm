@@ -564,6 +564,8 @@ export interface ImportLeadsResult {
   ok: boolean;
   imported: number;
   skipped: number;
+  /** DB ids of the leads created this import, so the UI can pre-select them. */
+  insertedIds: string[];
   message: string;
 }
 
@@ -588,7 +590,7 @@ export async function importApolloLeads(
 ): Promise<ImportLeadsResult> {
   const actor = await requireAdmin();
   if (!Array.isArray(rows) || rows.length === 0) {
-    return { ok: false, imported: 0, skipped: 0, message: "Fant ingen rader i filen." };
+    return { ok: false, imported: 0, skipped: 0, insertedIds: [], message: "Fant ingen rader i filen." };
   }
   const capped = rows.slice(0, IMPORT_MAX);
   const admin = createAdminClient();
@@ -663,25 +665,25 @@ export async function importApolloLeads(
     });
   }
 
-  let imported = 0;
+  const insertedIds: string[] = [];
   for (let i = 0; i < toInsert.length; i += 500) {
     const chunk = toInsert.slice(i, i + 500);
     const { data, error } = await admin.from("leads").insert(chunk).select("id");
     if (error) {
-      return { ok: false, imported, skipped, message: safeError("importApolloLeads", error) };
+      return { ok: false, imported: insertedIds.length, skipped, insertedIds, message: safeError("importApolloLeads", error) };
     }
-    imported += (data ?? []).length;
+    insertedIds.push(...(data ?? []).map((r) => r.id as string));
   }
+  const imported = insertedIds.length;
 
   await logAudit(actor, "leads.import_csv", { details: { imported, skipped } });
   revalidatePath("/admin/leads");
   revalidatePath("/dashboard");
-  refresh();
 
   const truncated =
     rows.length > IMPORT_MAX ? ` (kun de første ${IMPORT_MAX} av ${rows.length} rader ble behandlet)` : "";
   const message = imported
-    ? `Importerte ${imported} nye leads${skipped ? `, hoppet over ${skipped} duplikater/tomme` : ""}${truncated}.`
+    ? `Importerte ${imported} nye leads${skipped ? `, hoppet over ${skipped} duplikater/tomme` : ""}${truncated}. Alle er markert – trykk «Fordel jevnt».`
     : `Ingen nye leads – ${skipped} var duplikater eller tomme${truncated}.`;
-  return { ok: true, imported, skipped, message };
+  return { ok: true, imported, skipped, insertedIds, message };
 }

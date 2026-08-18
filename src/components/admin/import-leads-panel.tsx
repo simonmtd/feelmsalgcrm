@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Upload, FileUp } from "lucide-react";
 import { importApolloLeads, type ImportLeadRow } from "@/lib/actions/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -127,6 +128,7 @@ function mapRows(table: string[][]): { rows: ImportLeadRow[]; recognized: boolea
 
 /** Admin: import an Apollo.io CSV export straight into the lead pool. */
 export function ImportLeadsPanel() {
+  const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [rows, setRows] = useState<ImportLeadRow[]>([]);
@@ -163,9 +165,14 @@ export function ImportLeadsPanel() {
       const res = await importApolloLeads(rows);
       setMsg(res.message);
       if (res.ok) {
+        // Hand the new ids to the bulk table so it pre-selects them after refresh.
+        if (res.insertedIds.length) {
+          sessionStorage.setItem("importedLeadIds", JSON.stringify(res.insertedIds));
+        }
         setRows([]);
         setFileName(null);
         if (inputRef.current) inputRef.current.value = "";
+        router.refresh();
       }
     });
   }
