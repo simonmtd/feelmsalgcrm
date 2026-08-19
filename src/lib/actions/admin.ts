@@ -586,9 +586,11 @@ function cleanField(v: string | null | undefined, max = 300): string | null {
  * so the admin distributes them with the normal bulk-assign flow.
  */
 export async function importApolloLeads(
-  rows: ImportLeadRow[]
+  rows: ImportLeadRow[],
+  opts: { requirePhone?: boolean } = {}
 ): Promise<ImportLeadsResult> {
   const actor = await requireAdmin();
+  const requirePhone = opts.requirePhone !== false; // default: skip no-phone leads
   if (!Array.isArray(rows) || rows.length === 0) {
     return { ok: false, imported: 0, skipped: 0, insertedIds: [], message: "Fant ingen rader i filen." };
   }
@@ -629,12 +631,13 @@ export async function importApolloLeads(
   const niches = (nichesData as Niche[] | null) ?? [];
 
   const toInsert: Record<string, unknown>[] = [];
-  let skipped = 0;
+  let skippedDup = 0;
+  let skippedNoPhone = 0;
   for (const row of capped) {
     const company = cleanField(row.company_name, 200);
     const contact = cleanField(row.contact_name, 200);
     if (!company && !contact) {
-      skipped++;
+      skippedDup++;
       continue; // an empty row
     }
     const email = normEmail(row.email);
@@ -652,7 +655,12 @@ export async function importApolloLeads(
       (titleSig && seenTitleSig.has(titleSig)) ||
       (mobile && seenMobile.has(mobile));
     if (isDup) {
-      skipped++;
+      skippedDup++;
+      continue;
+    }
+    // Skip leads without a (Norwegian) phone number when required.
+    if (requirePhone && !phone) {
+      skippedNoPhone++;
       continue;
     }
     // Reserve within this batch too, so a file with internal duplicates dedups.
@@ -682,6 +690,7 @@ export async function importApolloLeads(
     });
   }
 
+  const skipped = skippedDup + skippedNoPhone;
   const insertedIds: string[] = [];
   for (let i = 0; i < toInsert.length; i += 500) {
     const chunk = toInsert.slice(i, i + 500);
@@ -693,14 +702,19 @@ export async function importApolloLeads(
   }
   const imported = insertedIds.length;
 
-  await logAudit(actor, "leads.import_csv", { details: { imported, skipped } });
+  await logAudit(actor, "leads.import_csv", { details: { imported, skippedDup, skippedNoPhone } });
   revalidatePath("/admin/leads");
   revalidatePath("/dashboard");
 
   const truncated =
     rows.length > IMPORT_MAX ? ` (kun de første ${IMPORT_MAX} av ${rows.length} rader ble behandlet)` : "";
+  const skipParts = [
+    skippedDup ? `${skippedDup} duplikater/tomme` : "",
+    skippedNoPhone ? `${skippedNoPhone} uten telefon` : "",
+  ].filter(Boolean);
+  const skipNote = skipParts.length ? `, hoppet over ${skipParts.join(" + ")}` : "";
   const message = imported
-    ? `Importerte ${imported} nye leads${skipped ? `, hoppet over ${skipped} duplikater/tomme` : ""}${truncated}. Alle er markert – trykk «Fordel jevnt».`
-    : `Ingen nye leads – ${skipped} var duplikater eller tomme${truncated}.`;
+    ? `Importerte ${imported} nye leads${skipNote}${truncated}. Alle er markert – trykk «Fordel jevnt».`
+    : `Ingen nye leads${skipNote || ` – ${skipped} filtrert bort`}${truncated}.`;
   return { ok: true, imported, skipped, insertedIds, message };
 }

@@ -134,6 +134,7 @@ export function ImportLeadsPanel() {
   const [rows, setRows] = useState<ImportLeadRow[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [requirePhone, setRequirePhone] = useState(true);
   const [isPending, startTransition] = useTransition();
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -162,7 +163,7 @@ export function ImportLeadsPanel() {
 
   function doImport() {
     startTransition(async () => {
-      const res = await importApolloLeads(rows);
+      const res = await importApolloLeads(rows, { requirePhone });
       setMsg(res.message);
       if (res.ok) {
         // Hand the new ids to the bulk table so it pre-selects them after refresh.
@@ -191,6 +192,16 @@ export function ImportLeadsPanel() {
           De havner i pool-en så du kan fordele dem og sette nisje som vanlig. Duplikater og
           utenlandske telefonnumre filtreres automatisk bort.
         </p>
+
+        <label className="flex w-fit items-center gap-2 text-sm text-wood-800">
+          <input
+            type="checkbox"
+            checked={requirePhone}
+            onChange={(e) => setRequirePhone(e.target.checked)}
+            className="h-4 w-4 accent-gold-500"
+          />
+          Kun leads med (norsk) telefonnummer
+        </label>
 
         <div className="flex flex-wrap items-center gap-3">
           <input
