@@ -14,7 +14,7 @@ import { ENRICH_BATCH_MAX } from "@/lib/enrichment";
 import { enrichLeadRows, type EnrichableLead } from "@/lib/jobs/enrich-leads";
 import { expandTitles, areaToLocations, validEmployeeRange, nicheKeywordTags } from "@/lib/prospecting";
 import { matchNiche } from "@/lib/niche-matcher";
-import { normEmail, companyTitleKey } from "@/lib/dedup";
+import { normEmail, companyTitleKey, companyContactKey, mobileKey } from "@/lib/dedup";
 import type { Niche } from "@/lib/types";
 
 export interface FormActionState {
@@ -595,24 +595,34 @@ export async function importApolloLeads(
   const capped = rows.slice(0, IMPORT_MAX);
   const admin = createAdminClient();
 
-  // Dedup against existing leads (any source) on Apollo id, email, or company+role.
+  // Dedup against EVERY existing lead (any source, any status) on several keys,
+  // so a re-import is caught even if just one of them matches: Apollo id, email,
+  // company+contact, company+title, or a Norwegian mobile number.
   const { data: existing } = await admin
     .from("leads")
-    .select("apollo_person_id, email, company_name, job_title");
+    .select("apollo_person_id, email, company_name, contact_name, job_title, phone");
   const seenApollo = new Set<string>();
   const seenEmail = new Set<string>();
-  const sigSeen = new Set<string>();
+  const seenTitleSig = new Set<string>();
+  const seenContactSig = new Set<string>();
+  const seenMobile = new Set<string>();
   for (const r of (existing as {
     apollo_person_id: string | null;
     email: string | null;
     company_name: string | null;
+    contact_name: string | null;
     job_title: string | null;
+    phone: string | null;
   }[] | null) ?? []) {
     if (r.apollo_person_id) seenApollo.add(r.apollo_person_id);
     const e = normEmail(r.email);
     if (e) seenEmail.add(e);
-    const sig = companyTitleKey(r.company_name, r.job_title);
-    if (sig) sigSeen.add(sig);
+    const ts = companyTitleKey(r.company_name, r.job_title);
+    if (ts) seenTitleSig.add(ts);
+    const cs = companyContactKey(r.company_name, r.contact_name);
+    if (cs) seenContactSig.add(cs);
+    const m = mobileKey(r.phone);
+    if (m) seenMobile.add(m);
   }
 
   const { data: nichesData } = await admin.from("niches").select("*");
@@ -630,12 +640,17 @@ export async function importApolloLeads(
     const email = normEmail(row.email);
     const apolloId = cleanField(row.apollo_person_id, 100);
     const jobTitle = cleanField(row.job_title, 200);
-    const sig = companyTitleKey(company, jobTitle);
+    const phone = norwegianPhone(row.phone);
+    const titleSig = companyTitleKey(company, jobTitle);
+    const contactSig = companyContactKey(company, contact);
+    const mobile = mobileKey(phone);
 
     const isDup =
       (apolloId && seenApollo.has(apolloId)) ||
       (email && seenEmail.has(email)) ||
-      (sig && sigSeen.has(sig));
+      (contactSig && seenContactSig.has(contactSig)) ||
+      (titleSig && seenTitleSig.has(titleSig)) ||
+      (mobile && seenMobile.has(mobile));
     if (isDup) {
       skipped++;
       continue;
@@ -643,7 +658,9 @@ export async function importApolloLeads(
     // Reserve within this batch too, so a file with internal duplicates dedups.
     if (apolloId) seenApollo.add(apolloId);
     if (email) seenEmail.add(email);
-    if (sig) sigSeen.add(sig);
+    if (contactSig) seenContactSig.add(contactSig);
+    if (titleSig) seenTitleSig.add(titleSig);
+    if (mobile) seenMobile.add(mobile);
 
     const website = cleanField(row.website, 300);
     const industry = cleanField(row.industry, 120);
@@ -653,7 +670,7 @@ export async function importApolloLeads(
       company_name: company,
       contact_name: contact,
       email,
-      phone: norwegianPhone(row.phone),
+      phone,
       website,
       industry,
       job_title: jobTitle,

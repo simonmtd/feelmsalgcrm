@@ -27,6 +27,30 @@ export function normCompany(company: string | null | undefined): string | null {
   return norm(company) || null;
 }
 
+/** Same person at the same company — the strongest name-based match (catches a
+ *  re-import even when the job title differs between sources). */
+export function companyContactKey(
+  company: string | null | undefined,
+  contact: string | null | undefined
+): string | null {
+  const c = norm(company);
+  const n = norm(contact);
+  if (!c || !n) return null;
+  return `${c}|${n}`;
+}
+
+/**
+ * A Norwegian MOBILE number (8 digits starting with 4 or 9), used as a dedup
+ * key. We only key on mobiles — shared corporate switchboard numbers (starting
+ * 2/3/5/6/7) would otherwise falsely merge different people at one company.
+ */
+export function mobileKey(phone: string | null | undefined): string | null {
+  let d = (phone ?? "").replace(/\D/g, "");
+  if (d.startsWith("0047")) d = d.slice(4);
+  else if (d.startsWith("47") && d.length === 10) d = d.slice(2);
+  return d.length === 8 && /^[49]/.test(d) ? d : null;
+}
+
 function norm(s: string | null | undefined): string {
   return (s ?? "")
     .toLowerCase()
