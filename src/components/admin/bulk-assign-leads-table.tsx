@@ -66,6 +66,20 @@ export function BulkAssignLeadsTable({
   const [sellerId, setSellerId] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  // Who "Fordel jevnt" distributes to — defaults to the actual sellers, but the
+  // admin can tick anyone (more people are on the phones now).
+  const [distributeTo, setDistributeTo] = useState<Set<string>>(
+    () => new Set(sellers.filter((s) => s.role === "seller").map((s) => s.id))
+  );
+
+  function toggleRecipient(id: string) {
+    setDistributeTo((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   // After a CSV import, the import panel stashes the new lead ids and refreshes;
   // pick them up here and pre-select them so the admin can distribute right away.
@@ -123,24 +137,21 @@ export function BulkAssignLeadsTable({
     });
   }
 
-  // "Fordel jevnt" spreads only across actual sellers — admins can still be
-  // picked manually per row, but they're not part of the even-distribution pool.
-  const distributionSellers = sellers.filter((s) => s.role === "seller");
-
   function handleDistribute() {
     const ids = [...selectedIds];
-    if (distributionSellers.length === 0) {
-      setMessage("Ingen selgere å fordele til.");
+    const recipientIds = sellers.filter((s) => distributeTo.has(s.id)).map((s) => s.id);
+    if (recipientIds.length === 0) {
+      setMessage("Velg minst én person å fordele til.");
       return;
     }
     startTransition(async () => {
-      const result = await distributeLeadsEvenly(ids, distributionSellers.map((s) => s.id));
+      const result = await distributeLeadsEvenly(ids, recipientIds);
       if (result.error) {
         setMessage(result.error);
         return;
       }
       setMessage(
-        `${result.assigned} ${result.assigned === 1 ? "lead" : "leads"} fordelt jevnt på ${distributionSellers.length} selgere.`
+        `${result.assigned} ${result.assigned === 1 ? "lead" : "leads"} fordelt jevnt på ${recipientIds.length} ${recipientIds.length === 1 ? "person" : "personer"}.`
       );
       setSelectedIds(new Set());
       setSellerId("");
@@ -177,6 +188,23 @@ export function BulkAssignLeadsTable({
               </span>
             ))}
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs uppercase tracking-wide text-wood-600">Fordel jevnt til:</span>
+            {sellers.map((seller) => (
+              <label
+                key={seller.id}
+                className="flex cursor-pointer items-center gap-1.5 rounded-[2px] border-2 border-ink bg-parchment px-2 py-0.5 text-xs text-wood-900"
+              >
+                <input
+                  type="checkbox"
+                  checked={distributeTo.has(seller.id)}
+                  onChange={() => toggleRecipient(seller.id)}
+                  className="h-3.5 w-3.5 accent-gold-500"
+                />
+                {(seller.full_name ?? seller.email).split(" ")[0]}
+              </label>
+            ))}
+          </div>
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm text-wood-800">Fordel {selectedIds.size} valgte til:</span>
             <Select
@@ -205,11 +233,11 @@ export function BulkAssignLeadsTable({
               type="button"
               size="sm"
               variant="outline"
-              disabled={isPending || sellers.length === 0}
+              disabled={isPending || distributeTo.size === 0}
               onClick={handleDistribute}
-              title="Round-robin over alle aktive selgere"
+              title="Round-robin over de avkryssede personene"
             >
-              Fordel jevnt
+              Fordel jevnt ({distributeTo.size})
             </Button>
             <Button
               type="button"
