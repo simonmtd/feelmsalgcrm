@@ -129,8 +129,11 @@ export function BulkAssignLeadsTable({
       }
       const sellerName =
         sellers.find((s) => s.id === target)?.full_name ?? "puljen (ikke tildelt)";
+      const skip = result.skippedCalled
+        ? ` ${result.skippedCalled} hoppet over (selskap alt ringt).`
+        : "";
       setMessage(
-        `${result.assigned} ${result.assigned === 1 ? "lead" : "leads"} fordelt til ${sellerName}.`
+        `${result.assigned} ${result.assigned === 1 ? "lead" : "leads"} fordelt til ${sellerName}.${skip}`
       );
       setSelectedIds(new Set());
       setSellerId("");
@@ -150,8 +153,11 @@ export function BulkAssignLeadsTable({
         setMessage(result.error);
         return;
       }
+      const skip = result.skippedCalled
+        ? ` ${result.skippedCalled} hoppet over (selskap alt ringt).`
+        : "";
       setMessage(
-        `${result.assigned} ${result.assigned === 1 ? "lead" : "leads"} fordelt jevnt på ${recipientIds.length} ${recipientIds.length === 1 ? "person" : "personer"}.`
+        `${result.assigned} ${result.assigned === 1 ? "lead" : "leads"} fordelt jevnt på ${recipientIds.length} ${recipientIds.length === 1 ? "person" : "personer"}.${skip}`
       );
       setSelectedIds(new Set());
       setSellerId("");

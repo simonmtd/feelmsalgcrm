@@ -14,7 +14,7 @@ import { ENRICH_BATCH_MAX } from "@/lib/enrichment";
 import { enrichLeadRows, type EnrichableLead } from "@/lib/jobs/enrich-leads";
 import { expandTitles, areaToLocations, validEmployeeRange, nicheKeywordTags } from "@/lib/prospecting";
 import { matchNiche } from "@/lib/niche-matcher";
-import { normEmail, companyTitleKey, companyContactKey, mobileKey } from "@/lib/dedup";
+import { normEmail, companyTitleKey, companyContactKey, mobileKey, normCompany } from "@/lib/dedup";
 import type { Niche } from "@/lib/types";
 
 export interface FormActionState {
@@ -175,7 +175,54 @@ export async function reassignLead(leadId: string, sellerId: string | null) {
 
 export interface BulkAssignResult {
   assigned: number;
+  /** Selected leads that were held back because their company was already called. */
+  skippedCalled?: number;
   error?: string;
+}
+
+/**
+ * From a set of lead ids, drop the ones whose COMPANY the team has already
+ * called (so we never hand out a lead at a company someone has already worked —
+ * this is what stops one seller re-calling what another already did). Matches on
+ * a normalized company name against call_logs. Returns the ids safe to assign
+ * plus how many were held back.
+ */
+async function filterAlreadyCalledCompanies(
+  admin: ReturnType<typeof createAdminClient>,
+  leadIds: string[]
+): Promise<{ assignable: string[]; skippedCalled: number }> {
+  // Every company the team has ever logged a call to.
+  const { data: calls } = await admin
+    .from("call_logs")
+    .select("company_name")
+    .not("company_name", "is", null);
+  const calledCompanies = new Set<string>();
+  for (const c of (calls as { company_name: string | null }[] | null) ?? []) {
+    const k = normCompany(c.company_name);
+    if (k) calledCompanies.add(k);
+  }
+  if (calledCompanies.size === 0) return { assignable: leadIds, skippedCalled: 0 };
+
+  // Company name of each selected lead.
+  const { data: rows } = await admin
+    .from("leads")
+    .select("id, company_name")
+    .in("id", leadIds);
+  const companyById = new Map(
+    ((rows as { id: string; company_name: string | null }[] | null) ?? []).map((r) => [
+      r.id,
+      normCompany(r.company_name),
+    ])
+  );
+
+  const assignable: string[] = [];
+  let skippedCalled = 0;
+  for (const id of leadIds) {
+    const c = companyById.get(id);
+    if (c && calledCompanies.has(c)) skippedCalled++;
+    else assignable.push(id);
+  }
+  return { assignable, skippedCalled };
 }
 
 /** Assigns many leads to one seller in a single write — used by the bulk bar on /admin/leads. */
@@ -188,24 +235,30 @@ export async function bulkAssignLeads(
   if (leadIds.length > 500) return { assigned: 0, error: "Maks 500 leads om gangen." };
 
   const supabase = createAdminClient();
+  // Don't hand out leads at companies the team has already called.
+  const { assignable, skippedCalled } = await filterAlreadyCalledCompanies(supabase, leadIds);
+  if (assignable.length === 0) {
+    return { assigned: 0, skippedCalled, error: "Alle de valgte er på selskaper som alt er ringt." };
+  }
+
   const { data, error } = await supabase
     .from("leads")
     .update(assignmentFields(sellerId))
-    .in("id", leadIds)
+    .in("id", assignable)
     .select("id");
 
-  if (error) return { assigned: 0, error: safeError("bulkAssignLeads", error) };
+  if (error) return { assigned: 0, skippedCalled, error: safeError("bulkAssignLeads", error) };
 
   const count = data?.length ?? 0;
   await logAudit(actor, "lead.bulk_assign", {
     targetType: "lead",
-    details: { count, sellerId },
+    details: { count, sellerId, skippedCalled },
   });
   if (sellerId && count > 0) {
     await notify(sellerId, `Du har fått ${count} ${count === 1 ? "ny lead" : "nye leads"} tildelt.`);
   }
   revalidateLeadViews();
-  return { assigned: count };
+  return { assigned: count, skippedCalled };
 }
 
 /** Round-robin distributes selected leads evenly across the given sellers. */
@@ -221,9 +274,15 @@ export async function distributeLeadsEvenly(
   const supabase = createAdminClient();
   const today = new Date().toISOString().slice(0, 10);
 
+  // Don't hand out leads at companies the team has already called.
+  const { assignable, skippedCalled } = await filterAlreadyCalledCompanies(supabase, leadIds);
+  if (assignable.length === 0) {
+    return { assigned: 0, skippedCalled, error: "Alle de valgte er på selskaper som alt er ringt." };
+  }
+
   // Group leads round-robin, then one UPDATE per seller.
   const buckets = new Map<string, string[]>();
-  leadIds.forEach((leadId, i) => {
+  assignable.forEach((leadId, i) => {
     const sellerId = sellerIds[i % sellerIds.length];
     const bucket = buckets.get(sellerId) ?? [];
     bucket.push(leadId);
@@ -247,10 +306,10 @@ export async function distributeLeadsEvenly(
 
   await logAudit(actor, "lead.bulk_assign", {
     targetType: "lead",
-    details: { count: assigned, distributed: true, sellers: sellerIds.length },
+    details: { count: assigned, distributed: true, sellers: sellerIds.length, skippedCalled },
   });
   revalidateLeadViews();
-  return { assigned };
+  return { assigned, skippedCalled };
 }
 
 export async function classifyLeadNiche(leadId: string, nicheId: string) {
