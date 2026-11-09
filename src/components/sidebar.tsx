@@ -17,6 +17,7 @@ import {
   ScrollText,
   LogOut,
   Clapperboard,
+  Bot,
   type LucideIcon,
 } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
@@ -48,6 +49,7 @@ export function Sidebar({ profile }: { profile: Profile }) {
         { href: "/leads", label: "Mine leads", icon: ListChecks },
         { href: "/calendar", label: "Kalender", icon: CalendarDays },
         { href: "/meetings", label: "Møter", icon: Handshake },
+        { href: "/grok", label: "Grok-import", icon: Bot },
         ...adminExtraLinks,
       ]
     : [
@@ -56,6 +58,7 @@ export function Sidebar({ profile }: { profile: Profile }) {
         { href: "/leads", label: "Mine leads", icon: ListChecks },
         { href: "/meetings", label: "Mine møter", icon: Handshake },
         { href: "/calendar", label: "Kalender", icon: CalendarDays },
+        { href: "/grok", label: "Grok-import", icon: Bot },
       ];
 
   return (

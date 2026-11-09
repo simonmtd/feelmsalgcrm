@@ -21,6 +21,7 @@ const TITLES: TitleEntry[] = [
   { match: (p) => p === "/notifications", title: "Varsler", description: "Beskjeder om nye leads og tildelinger" },
   { match: (p) => p === "/account", title: "Min konto", description: "Bytt passord" },
   { match: (p) => p === "/meetings", title: "Møter", description: "Registrer og følg opp bookede møter, med kunde, produkt og verdi" },
+  { match: (p) => p === "/grok", title: "Grok-import", description: "Hent leads med Grok og legg dem rett inn i CRM-et" },
   { match: (p) => p === "/calendar", title: "Team-kalender", description: "Se salgsmøter og avtaler for hele teamet" },
   { match: (p) => p === "/leads" || p.startsWith("/leads/"), title: "Mine leads", description: "Alle leads som er eller har vært tildelt deg" },
   { match: (p) => p === "/admin/leads", title: "Alle leads", description: "Klassifiser niche, omfordel selgere, følg med på pipeline" },
