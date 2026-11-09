@@ -143,6 +143,14 @@ export type ProductType =
   | "event_film"
   | "other";
 
+export type CommissionStatus = "pending" | "approved" | "rejected";
+
+export const COMMISSION_STATUS_LABELS: Record<CommissionStatus, string> = {
+  pending: "Venter",
+  approved: "Godkjent",
+  rejected: "Avslått",
+};
+
 export interface Meeting {
   id: string;
   seller_id: string;
@@ -157,6 +165,12 @@ export interface Meeting {
   product_type: ProductType | null;
   signed: boolean;
   signed_at: string | null;
+  commission_claimed: boolean;
+  commission_amount: number;
+  commission_status: CommissionStatus;
+  commission_reported_at: string | null;
+  commission_reviewed_at: string | null;
+  commission_reviewed_by: string | null;
   created_at: string;
   seller?: Pick<Profile, "id" | "full_name" | "email"> | null;
   lead?: Pick<Lead, "id" | "company_name" | "contact_name"> | null;

@@ -18,6 +18,7 @@ import {
   LogOut,
   Clapperboard,
   Bot,
+  Coins,
   type LucideIcon,
 } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
@@ -32,6 +33,7 @@ interface NavLink {
 
 const adminExtraLinks: NavLink[] = [
   { href: "/admin/leads", label: "Alle leads", icon: Building2 },
+  { href: "/admin/provisjon", label: "Provisjon", icon: Coins },
   { href: "/admin/stats", label: "Statistikk", icon: BarChart3 },
   { href: "/admin/sellers", label: "Selgere", icon: Users },
   { href: "/admin/niches", label: "Nicher", icon: Tags },
@@ -57,6 +59,7 @@ export function Sidebar({ profile }: { profile: Profile }) {
         { href: "/today", label: "Dagens leads", icon: CalendarCheck },
         { href: "/leads", label: "Mine leads", icon: ListChecks },
         { href: "/meetings", label: "Mine møter", icon: Handshake },
+        { href: "/provisjon", label: "Min provisjon", icon: Coins },
         { href: "/calendar", label: "Kalender", icon: CalendarDays },
         { href: "/grok", label: "Grok-import", icon: Bot },
       ];

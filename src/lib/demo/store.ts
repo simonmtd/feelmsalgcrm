@@ -382,6 +382,12 @@ function buildSeed(): DemoStore {
       product_type: spec.product ?? null,
       signed: spec.signed ?? false,
       signed_at: null,
+      commission_claimed: false,
+      commission_amount: 500,
+      commission_status: "pending",
+      commission_reported_at: null,
+      commission_reviewed_at: null,
+      commission_reviewed_by: null,
       created_at: daysAgo(3),
     };
   }

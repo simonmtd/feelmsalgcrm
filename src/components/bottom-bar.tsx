@@ -16,6 +16,7 @@ const sellerShortcuts: Shortcut[] = [
   { href: "/today", tag: "DAG", tagClass: "bg-gold-500 text-ink", label: "Dagens leads" },
   { href: "/leads", tag: "MIN", tagClass: "bg-forest-500 text-white", label: "Mine leads" },
   { href: "/meetings", tag: "MØT", tagClass: "bg-purple-400 text-ink", label: "Mine møter" },
+  { href: "/provisjon", tag: "KR", tagClass: "bg-gold-300 text-ink", label: "Provisjon" },
   { href: "/calendar", tag: "KAL", tagClass: "bg-himmel-500 text-ink", label: "Kalender" },
   { href: "/dashboard", tag: "DSH", tagClass: "bg-wood-200 text-wood-900", label: "Dashboard" },
 ];
@@ -26,6 +27,7 @@ const adminShortcuts: Shortcut[] = [
   { href: "/admin/leads", tag: "ALL", tagClass: "bg-forest-500 text-white", label: "Alle leads" },
   { href: "/meetings", tag: "MØT", tagClass: "bg-wood-200 text-wood-900", label: "Møter" },
   { href: "/calendar", tag: "KAL", tagClass: "bg-himmel-500 text-ink", label: "Kalender" },
+  { href: "/admin/provisjon", tag: "KR", tagClass: "bg-gold-300 text-ink", label: "Provisjon" },
   { href: "/admin/sync", tag: "SYN", tagClass: "bg-purple-400 text-ink", label: "Sync" },
   { href: "/admin/settings", tag: "INN", tagClass: "bg-red-400 text-ink", label: "Innstillinger" },
 ];

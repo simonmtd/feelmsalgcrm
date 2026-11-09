@@ -7,6 +7,7 @@ import { requireProfile } from "@/lib/dal";
 import { safeError, throwSafe } from "@/lib/actions/errors";
 import { MEETING_TYPE_LABELS, PRODUCT_TYPE_LABELS } from "@/lib/types";
 import type { MeetingType, ProductType } from "@/lib/types";
+import { COMMISSION_NOTE_MIN } from "@/lib/commission";
 
 const MEETING_TYPES = new Set(Object.keys(MEETING_TYPE_LABELS));
 const PRODUCT_TYPES = new Set(Object.keys(PRODUCT_TYPE_LABELS));
@@ -90,6 +91,8 @@ export async function createMeeting(
   const newCustomer = String(formData.get("new_customer") ?? "").trim().slice(0, 200);
   const productRaw = String(formData.get("product_type") ?? "");
   const dealSizeRaw = String(formData.get("deal_size") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim().slice(0, 5000) || null;
+  const claimCommission = formData.get("commission_claimed") === "on";
 
   if (!title || !date || !startTime || !endTime) {
     return { error: "Fyll ut tittel, dato og tidspunkt." };
@@ -99,6 +102,12 @@ export async function createMeeting(
   }
   if (productRaw && !PRODUCT_TYPES.has(productRaw)) {
     return { error: "Ugyldig produkttype." };
+  }
+  if (claimCommission && type === "internal") {
+    return { error: "Interne møter gir ikke provisjon." };
+  }
+  if (claimCommission && (notes?.length ?? 0) < COMMISSION_NOTE_MIN) {
+    return { error: `Skriv et notat om møtet for å kreve provisjon (minst ${COMMISSION_NOTE_MIN} tegn).` };
   }
 
   const startsAt = new Date(`${date}T${startTime}`);
@@ -145,14 +154,20 @@ export async function createMeeting(
     starts_at: startsAt.toISOString(),
     ends_at: endsAt.toISOString(),
     location,
+    notes,
     deal_size: dealSize,
     product_type: (productRaw || null) as ProductType | null,
+    commission_claimed: claimCommission,
   });
 
   if (error) return { error: safeError("createMeeting", error) };
 
   revalidateMeetingViews();
-  return { success: "Møtet ble lagt til." };
+  return {
+    success: claimCommission
+      ? "Møtet ble lagt til, og provisjonen sendes til godkjenning i ukesrapporten."
+      : "Møtet ble lagt til.",
+  };
 }
 
 export async function deleteMeeting(meetingId: string) {
@@ -162,13 +177,16 @@ export async function deleteMeeting(meetingId: string) {
   // RLS also enforces this, but check here so non-owners get a clear error.
   const { data: meeting } = await supabase
     .from("meetings")
-    .select("id, seller_id")
+    .select("id, seller_id, commission_claimed, commission_status")
     .eq("id", meetingId)
     .single();
 
   if (!meeting) throw new Error("Fant ikke møtet.");
   if (profile.role !== "admin" && meeting.seller_id !== profile.id) {
     throw new Error("Du kan bare slette dine egne møter.");
+  }
+  if (profile.role !== "admin" && meeting.commission_claimed && meeting.commission_status !== "pending") {
+    throw new Error("Møtet er behandlet for provisjon og kan ikke slettes.");
   }
 
   const { error } = await supabase.from("meetings").delete().eq("id", meetingId);

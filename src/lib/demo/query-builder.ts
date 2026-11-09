@@ -18,7 +18,7 @@ const EMBEDS: Record<string, Record<string, { table: TableName; fk: string }>> =
 
 function parseEmbeds(selectStr: string) {
   const embeds: { alias: string }[] = [];
-  const re = /(\w+):\w+\(/g;
+  const re = /(\w+):\w+(?:!\w+)?\(/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(selectStr))) embeds.push({ alias: m[1] });
   return embeds;
@@ -76,6 +76,12 @@ function defaultsFor(table: TableName): Row {
         product_type: null,
         signed: false,
         signed_at: null,
+        commission_claimed: false,
+        commission_amount: 500,
+        commission_status: "pending",
+        commission_reported_at: null,
+        commission_reviewed_at: null,
+        commission_reviewed_by: null,
       };
     case "notifications":
       return { read_at: null, lead_id: null, type: "lead_assigned" };

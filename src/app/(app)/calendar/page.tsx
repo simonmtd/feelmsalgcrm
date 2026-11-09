@@ -16,7 +16,7 @@ export default async function CalendarPage() {
 
   const { data: meetingsRaw } = await supabase
     .from("meetings")
-    .select("*, seller:profiles(id, full_name, email), lead:leads(id, company_name, contact_name)")
+    .select("*, seller:profiles!meetings_seller_id_fkey(id, full_name, email), lead:leads(id, company_name, contact_name)")
     .order("starts_at", { ascending: true });
 
   // The "new meeting" form lets you attach a customer — sellers pick from their

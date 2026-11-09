@@ -11,7 +11,7 @@ export default async function MeetingsPage() {
   // Sellers manage their own booked meetings; an admin oversees the whole team's.
   let meetingsQuery = supabase
     .from("meetings")
-    .select("*, seller:profiles(id, full_name, email), lead:leads(id, company_name, contact_name)")
+    .select("*, seller:profiles!meetings_seller_id_fkey(id, full_name, email), lead:leads(id, company_name, contact_name)")
     .order("starts_at", { ascending: true });
   if (!isAdmin) meetingsQuery = meetingsQuery.eq("seller_id", profile.id);
 

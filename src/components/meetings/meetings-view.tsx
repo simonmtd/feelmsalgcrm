@@ -16,6 +16,9 @@ import {
   type MeetingActionState,
 } from "@/lib/actions/meetings";
 import { LeadCombobox } from "@/components/meetings/lead-combobox";
+import { CommissionCell } from "@/components/commission/commission-cell";
+import { Textarea } from "@/components/ui/textarea";
+import { COMMISSION_PER_MEETING } from "@/lib/commission";
 import { formatCurrency, cn } from "@/lib/utils";
 import { MEETING_TYPE_LABELS, PRODUCT_TYPE_LABELS } from "@/lib/types";
 import type { Lead, Meeting, MeetingType, ProductType, Profile } from "@/lib/types";
@@ -66,6 +69,9 @@ function MeetingRow({
           <p className="mt-1 flex items-center gap-1 text-xs text-wood-600">
             <MapPin className="h-3 w-3" /> {meeting.location}
           </p>
+        )}
+        {meeting.notes && (
+          <p className="mt-1 max-w-xs whitespace-pre-line text-xs italic text-wood-700">{meeting.notes}</p>
         )}
       </td>
       <td className="py-3 pr-4">
@@ -171,6 +177,9 @@ function MeetingRow({
         ) : (
           <span className="text-sm text-wood-600">–</span>
         )}
+      </td>
+      <td className="py-3 pr-4">
+        <CommissionCell meeting={meeting} canEdit={canEdit} />
       </td>
       <td className="py-3">
         {canEdit && (
@@ -407,6 +416,19 @@ export function MeetingsView({
                 <Input id="location" name="location" placeholder="Teams, kontoret, hos kunden…" />
               </div>
 
+              <div className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-4">
+                <Label htmlFor="notes">Notat</Label>
+                <Textarea
+                  id="notes"
+                  name="notes"
+                  placeholder="Hvem møtte du, hva ble sagt, neste steg … (påkrevd for provisjon)"
+                />
+              </div>
+              <label className="flex w-fit items-center gap-2 text-sm text-wood-800 sm:col-span-2 lg:col-span-4">
+                <input type="checkbox" name="commission_claimed" className="h-4 w-4 accent-gold-500" />
+                Provisjonsmøte – krev {formatCurrency(COMMISSION_PER_MEETING)} (godkjennes i ukesrapporten)
+              </label>
+
               <div className="flex flex-wrap items-center gap-3 sm:col-span-2 lg:col-span-4">
                 <Button type="submit">Lagre møte</Button>
                 {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
@@ -432,6 +454,7 @@ export function MeetingsView({
                   <th className="py-2 pr-4">Produkt</th>
                   <th className="py-2 pr-4">Deal size</th>
                   <th className="py-2 pr-4">Signert</th>
+                  <th className="py-2 pr-4">Provisjon</th>
                   <th className="py-2" />
                 </tr>
               </thead>
@@ -469,6 +492,7 @@ export function MeetingsView({
                   <th className="py-2 pr-4">Produkt</th>
                   <th className="py-2 pr-4">Deal size</th>
                   <th className="py-2 pr-4">Signert</th>
+                  <th className="py-2 pr-4">Provisjon</th>
                   <th className="py-2" />
                 </tr>
               </thead>
