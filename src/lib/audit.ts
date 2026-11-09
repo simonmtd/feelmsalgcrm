@@ -14,7 +14,8 @@ interface AuditOptions {
  * (logged only) so auditing can never break the underlying action.
  */
 export async function logAudit(
-  actor: Pick<Profile, "id" | "email">,
+  /** id is null for non-user actors, e.g. an admin API key. */
+  actor: { id: Profile["id"] | null; email: Profile["email"] },
   action: string,
   opts: AuditOptions = {}
 ) {

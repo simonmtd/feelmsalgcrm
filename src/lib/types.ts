@@ -8,7 +8,7 @@ export type LeadStatus =
   | "won"
   | "lost";
 
-export type LeadSource = "apollo" | "hubspot" | "manual";
+export type LeadSource = "apollo" | "hubspot" | "manual" | "apollo-grok";
 
 export type FilmingStatus =
   | "not_started"
@@ -63,6 +63,11 @@ export interface Lead {
   apollo_person_id: string | null;
   enriched_at: string | null;
   org_number: string | null;
+  linkedin_url: string | null;
+  city: string | null;
+  country: string | null;
+  employee_count: number | null;
+  email_status: string | null;
   duplicate_of: string | null;
   raw_hubspot_data: Record<string, unknown> | null;
   created_at: string;

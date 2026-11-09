@@ -88,7 +88,7 @@ function defaultsFor(table: TableName): Row {
 
 type Mutation =
   | { type: "update"; payload: Row }
-  | { type: "insert"; payload: Row }
+  | { type: "insert"; payload: Row | Row[] }
   | { type: "upsert"; payload: Row | Row[]; onConflict?: string }
   | { type: "delete" };
 
@@ -182,7 +182,7 @@ export class MockQueryBuilder implements PromiseLike<{ data: unknown; error: nul
     return this;
   }
 
-  insert(payload: Row) {
+  insert(payload: Row | Row[]) {
     this.mutation = { type: "insert", payload };
     return this;
   }
@@ -231,15 +231,16 @@ export class MockQueryBuilder implements PromiseLike<{ data: unknown; error: nul
 
     if (this.mutation?.type === "insert") {
       const now = new Date().toISOString();
-      const newRow: Row = {
+      const items = Array.isArray(this.mutation.payload) ? this.mutation.payload : [this.mutation.payload];
+      const newRows: Row[] = items.map((item: Row) => ({
         id: crypto.randomUUID(),
         created_at: now,
         updated_at: now,
         ...defaultsFor(this.table),
-        ...this.mutation.payload,
-      };
-      table.push(newRow);
-      const rows = this.finalizeRows([newRow]);
+        ...item,
+      }));
+      table.push(...newRows);
+      const rows = this.finalizeRows(newRows);
       return { data: this.wantSingle ? rows[0] ?? null : rows, error: null, count: rows.length };
     }
 

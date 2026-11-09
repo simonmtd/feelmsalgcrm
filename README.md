@@ -77,3 +77,43 @@ leads, lead_activities, sync_runs, app_settings) og RLS-policyer.
   "kjør nå"-knapper
 - `src/lib/actions/*` — server actions for mutasjoner
 - `supabase/migrations/0001_init.sql` — databaseskjema + RLS
+
+## Lead-API for Grok-boter (`/api/leads`)
+
+Auth: `Authorization: Bearer <nøkkel>`.
+
+- **Admin-nøkkel** = env `LEADS_API_KEY`. Hver lead må ha `assigned_to`.
+- **Selger-nøkkel** = rad i `api_keys` med `seller_id`. Selgeren bestemmes av
+  nøkkelen, `assigned_to` kan utelates (sendes den, må den matche).
+
+```sql
+-- Gi en selger et handle (brukes i assigned_to):
+update profiles set handle = 'simon' where email = 'simon@feelm.no';
+-- Lag en nøkkel for selgeren (generer hemmeligheten med: openssl rand -hex 32):
+insert into api_keys (name, seller_id, key_hash)
+values ('grok-simon', (select id from profiles where handle = 'simon'),
+        encode(digest('<hemmelig-nøkkel>', 'sha256'), 'hex'));
+-- Trekk tilbake: update api_keys set revoked_at = now() where name = 'grok-simon';
+```
+
+**`POST /api/leads`**: ett lead-objekt eller `{ "leads": [...] }` (maks 200).
+Felter: `first_name, last_name, title, company_name, company_domain, email,
+email_status, phone, linkedin_url, country, city, industry, employee_count,
+orgnr, source ("apollo-grok"), notes, assigned_to`. Samme dedup- og
+telefonsjekk som CSV-importen, og selskaper teamet alt har ringt holdes
+tilbake. Godkjente leads tildeles direkte til selgeren (status `assigned`), og
+`notes` lagres som notat. Svaret er `201` hvis minst én ble opprettet (ellers `200`):
+
+```json
+{ "created":  [{ "index": 0, "id": "…", "assigned_to": "simon" }],
+  "rejected": [{ "index": 1, "reason": "duplicate", "message": "…",
+                 "duplicate_of": "…", "matched_on": "email" }],
+  "summary":  { "received": 2, "created": 1, "rejected": 1 } }
+```
+
+Avvisningsgrunner: `invalid`, `missing_name`, `invalid_email`,
+`missing_assigned_to`, `unknown_seller`, `seller_mismatch`, `duplicate`,
+`no_norwegian_phone`, `company_already_called`.
+
+**`GET /api/leads?email=…`** eller **`?domain=…`** gir
+`{ exists, count, leads: [{ id, company_name, contact_name, status, source, assigned_to, created_at }] }`.

@@ -10,6 +10,7 @@ import type {
   ProductType,
   AuditLogEntry,
   Notification,
+  CallLog,
   LeadStatus,
   FilmingStatus,
   LeadSource,
@@ -21,6 +22,16 @@ export interface AppSettingRow {
   value: number;
 }
 
+export interface ApiKeyRow {
+  id: string;
+  name: string;
+  key_hash: string;
+  seller_id: string | null;
+  created_at: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
+}
+
 export interface DemoStore {
   niches: Niche[];
   profiles: Profile[];
@@ -30,6 +41,8 @@ export interface DemoStore {
   meetings: Meeting[];
   audit_log: AuditLogEntry[];
   notifications: Notification[];
+  call_logs: CallLog[];
+  api_keys: ApiKeyRow[];
   app_settings: AppSettingRow[];
   /** email (lowercased) -> password, kept out of the Profile objects so it never reaches a client component */
   credentials: Record<string, string>;
@@ -168,6 +181,11 @@ function buildSeed(): DemoStore {
       apollo_person_id: null,
       enriched_at: null,
       org_number: null,
+      linkedin_url: null,
+      city: null,
+      country: null,
+      employee_count: null,
+      email_status: null,
       duplicate_of: null,
       raw_hubspot_data: null,
       created_at: createdAt,
@@ -452,6 +470,8 @@ function buildSeed(): DemoStore {
     meetings,
     audit_log,
     notifications,
+    call_logs: [],
+    api_keys: [],
     app_settings: [{ key: "daily_lead_count", value: 10 }],
     credentials,
   };

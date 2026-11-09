@@ -14,8 +14,11 @@ export async function updateSession(request: NextRequest) {
   // Public, secret-authenticated API routes must bypass the login redirect:
   // cron jobs and the Apollo phone-reveal webhook are called by external
   // services with no session cookie, and each guards itself with CRON_SECRET.
+  // /api/leads is the bots' lead API, guarded by its own Bearer API keys.
   const isPublicApi =
-    path.startsWith("/api/cron") || path.startsWith("/api/apollo");
+    path.startsWith("/api/cron") ||
+    path.startsWith("/api/apollo") ||
+    path === "/api/leads";
 
   if (DEMO_MOCK) {
     // The proxy runs in a separate runtime from the server components, so it
