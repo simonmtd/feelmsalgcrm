@@ -3,6 +3,7 @@ import { fetchAll } from "@/lib/fetch-all";
 import { Users, CalendarPlus, Wallet, Trophy, ArrowUpRight, Filter } from "lucide-react";
 import { requireProfile } from "@/lib/dal";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { NicheSwitcher } from "@/components/niche-switcher";
 import { KeepAwake } from "@/components/keep-awake";
 import { RecentLeadRow } from "@/components/dashboard/recent-lead-row";
@@ -39,21 +40,25 @@ export default async function DashboardPage() {
   // see it (meetings are team-visible), so it renders for admins and sellers.
   const callsSince = new Date();
   callsSince.setDate(callsSince.getDate() - 366);
+  // Team-wide numbers (leaderboard, activity) are read server-side with the
+  // service role: RLS only lets a seller read their own meetings/calls, and we
+  // pass on just the aggregate fields below (no notes, customers or phones).
+  const team = createAdminClient();
   const [allMeetings, { data: teamRows }, callLogsData] = await Promise.all([
     fetchAll((from, to) =>
-      supabase.from("meetings").select("seller_id, deal_size, signed, signed_at, type, created_at").order("id").range(from, to)
+      team.from("meetings").select("seller_id, deal_size, signed, signed_at, type, created_at").order("id").range(from, to)
     ),
     // All active team members, incl. admins who also sell (e.g. Tobias). We keep
     // sellers always, and admins only when they've actually booked a meeting, so
     // pure-admin accounts don't clutter the board.
-    supabase
+    team
       .from("profiles")
       .select("id, full_name, email, role")
       .eq("is_active", true),
     // Call activity for the stats (bounded to a year so a year average works).
     // Returns [] if the call_logs table isn't set up yet, so the page won't break.
     fetchAll((from, to) =>
-      supabase
+      team
         .from("call_logs")
         .select("seller_id, created_at")
         .gte("created_at", callsSince.toISOString())

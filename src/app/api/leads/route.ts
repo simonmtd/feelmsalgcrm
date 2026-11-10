@@ -98,7 +98,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const matches = await lookupLeads(admin, q);
+    const matches = await lookupLeads(admin, q, a.caller.kind === "seller" ? a.caller.sellerId : undefined);
     return NextResponse.json({ query: q, exists: matches.length > 0, count: matches.length, leads: matches });
   } catch (error) {
     console.error("[api/leads GET]", error);

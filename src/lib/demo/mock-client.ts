@@ -75,11 +75,13 @@ export function createMockAdminClient() {
           email,
           password,
           user_metadata,
+          app_metadata,
         }: {
           email: string;
           password: string;
           email_confirm?: boolean;
-          user_metadata?: { full_name?: string | null; role?: string };
+          user_metadata?: { full_name?: string | null };
+          app_metadata?: { role?: string; invited?: boolean };
         }) {
           if (store.profiles.some((p) => p.email.toLowerCase() === email.toLowerCase())) {
             return { data: null, error: { message: "En bruker med denne e-posten finnes allerede." } };
@@ -89,9 +91,9 @@ export function createMockAdminClient() {
             id: crypto.randomUUID(),
             email,
             full_name: user_metadata?.full_name ?? null,
-            role: (user_metadata?.role as UserRole) ?? "seller",
+            role: app_metadata?.role === "admin" ? "admin" : ("seller" as UserRole),
             active_niche_id: null,
-            is_active: true,
+            is_active: app_metadata?.invited ?? false,
             created_at: now,
           };
           store.profiles.push(profile);

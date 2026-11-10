@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parsePhoneWebhook } from "@/lib/apollo";
@@ -8,11 +9,17 @@ import { parsePhoneWebhook } from "@/lib/apollo";
  * the query string, since Apollo webhooks aren't signed. Only fills phone when
  * the lead is still missing one, so it never clobbers a manually entered number.
  */
+function safeEqual(a: string, b: string) {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  return ab.length === bb.length && timingSafeEqual(ab, bb);
+}
+
 export async function POST(request: Request) {
   const url = new URL(request.url);
   const secret = url.searchParams.get("secret");
   const expected = process.env.APOLLO_WEBHOOK_SECRET ?? process.env.CRON_SECRET;
-  if (!expected || secret !== expected) {
+  if (!expected || !secret || !safeEqual(secret, expected)) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 

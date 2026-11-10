@@ -54,7 +54,10 @@ export async function createSeller(
     email,
     password,
     email_confirm: true,
-    user_metadata: { full_name: fullName || null, role },
+    user_metadata: { full_name: fullName || null },
+    // Role + "invited" live in app_metadata, which only the service role can
+    // set; the new-user trigger reads them from there (never user_metadata).
+    app_metadata: { role, invited: true },
   });
 
   if (error) {

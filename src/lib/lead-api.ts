@@ -42,7 +42,8 @@ export const apiLeadSchema = z.object({
   email: str(320),
   email_status: str(50),
   phone: str(50),
-  linkedin_url: str(500),
+  // Only real web links – a "javascript:" URL would run when someone clicks it.
+  linkedin_url: str(500).transform((v) => (v && /^https?:\/\//i.test(v) ? v : null)),
   country: str(100),
   city: str(100),
   industry: str(120),
@@ -304,7 +305,9 @@ export interface LeadLookupMatch {
 /** Existing leads matching an email (exact) or a domain (email domain or website). */
 export async function lookupLeads(
   admin: Admin,
-  q: { email: string } | { domain: string }
+  q: { email: string } | { domain: string },
+  /** For a seller's key: other sellers' leads only say that they exist. */
+  viewerSellerId?: string
 ): Promise<LeadLookupMatch[]> {
   // Filtered in JS (same full-table read the dedup does) so stored values in
   // any shape — mixed-case emails, "https://www.x.no/" websites — match.
@@ -329,13 +332,16 @@ export async function lookupLeads(
 
   const sellers = await loadApiSellers(admin);
   const handleById = new Map([...sellers.values()].map((s) => [s.id, s.handle]));
-  return matches.slice(0, 50).map((r) => ({
+  return matches.slice(0, 50).map((r) => {
+    const hidden = viewerSellerId != null && r.assigned_to !== viewerSellerId;
+    return {
     id: r.id,
-    company_name: r.company_name,
-    contact_name: r.contact_name,
+    company_name: hidden ? null : r.company_name,
+    contact_name: hidden ? null : r.contact_name,
     status: r.status,
     source: r.source,
-    assigned_to: r.assigned_to ? handleById.get(r.assigned_to) ?? "annen selger" : null,
+    assigned_to: r.assigned_to ? (hidden ? "annen selger" : handleById.get(r.assigned_to) ?? "annen selger") : null,
     created_at: r.created_at,
-  }));
+    };
+  });
 }

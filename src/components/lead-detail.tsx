@@ -410,7 +410,7 @@ export function LeadDetail({ lead, activities }: { lead: Lead; activities: LeadA
                     </dd>
                   </>
                 )}
-                {lead.linkedin_url && (
+                {lead.linkedin_url && /^https?:\/\//i.test(lead.linkedin_url) && (
                   <>
                     <dt className="text-subtle">LinkedIn</dt>
                     <dd className="min-w-0">

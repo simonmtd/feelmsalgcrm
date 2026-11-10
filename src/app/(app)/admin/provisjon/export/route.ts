@@ -5,7 +5,10 @@ import { commissionMonth } from "@/lib/commission";
 
 /** CSV cell for Norwegian Excel (semicolon-separated, quotes doubled). */
 function cell(v: string | number | null | undefined) {
-  const s = v == null ? "" : String(v);
+  let s = v == null ? "" : String(v);
+  // Neutralise spreadsheet formulas (CSV injection): a title like "=HYPERLINK(…)"
+  // typed by a user must not execute when the file is opened in Excel.
+  if (typeof v === "string" && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
   return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
