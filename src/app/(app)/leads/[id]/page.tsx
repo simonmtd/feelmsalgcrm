@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { requireProfile } from "@/lib/dal";
 import { createClient } from "@/lib/supabase/server";
 import { LeadDetail } from "@/components/lead-detail";
@@ -30,11 +29,6 @@ export default async function LeadDetailPage({
     .order("created_at", { ascending: false });
 
   return (
-    <div className="flex flex-col gap-4">
-      <Link href="/leads" className="inline-block eyebrow uppercase tracking-wide text-muted hover:text-fg">
-        ← Tilbake til mine leads
-      </Link>
-      <LeadDetail lead={lead as Lead} activities={(activities as LeadActivity[]) ?? []} />
-    </div>
+    <LeadDetail lead={lead as Lead} activities={(activities as LeadActivity[]) ?? []} />
   );
 }

@@ -181,7 +181,16 @@ const CALL_OUTCOMES: Record<
  * sets (or clears) the next follow-up date — all in one action, so a seller
  * working the phone doesn't have to touch three separate controls per call.
  */
-export async function logCallOutcome(leadId: string, outcome: CallOutcome, note?: string) {
+/**
+ * `followUpAt`: leave undefined to use the outcome's rule (e.g. «Ikke svar» →
+ * next business morning); pass an ISO time to override it, or null to clear.
+ */
+export async function logCallOutcome(
+  leadId: string,
+  outcome: CallOutcome,
+  note?: string,
+  followUpAt?: string | null
+) {
   const cfg = CALL_OUTCOMES[outcome];
   if (!cfg) throw new Error("Ugyldig samtaleutfall.");
   const { profile, supabase } = await assertOwnsLead(leadId);
@@ -195,12 +204,17 @@ export async function logCallOutcome(leadId: string, outcome: CallOutcome, note?
   });
   if (actErr) throwSafe("logCallOutcome", actErr);
 
-  const next_follow_up_at =
+  let next_follow_up_at: string | null =
     cfg.followUp === "standard"
       ? suggestedFollowUp()
       : cfg.followUp === "soon"
         ? nextBusinessMorning()
         : null;
+  if (followUpAt !== undefined && cfg.followUp !== "none") {
+    const t = followUpAt ? new Date(followUpAt) : null;
+    if (t && Number.isNaN(t.getTime())) throw new Error("Ugyldig tidspunkt for oppfølging.");
+    next_follow_up_at = t ? t.toISOString() : null;
+  }
 
   // follow_up_reminded_at isn't in the seller column grant (migration 0004), so
   // this write goes through the service-role client. Ownership already verified.

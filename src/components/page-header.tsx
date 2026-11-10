@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { initialsFor } from "@/lib/avatar-color";
 import { InfoPopover } from "@/components/ui/info-popover";
 import { NotificationBell } from "@/components/notification-bell";
@@ -14,6 +15,8 @@ interface TitleEntry {
   match: (path: string) => boolean;
   title: string;
   description?: string;
+  /** The page renders its own big title (e.g. a lead's company name). */
+  hideTitle?: boolean;
 }
 
 const TITLES: TitleEntry[] = [
@@ -27,7 +30,8 @@ const TITLES: TitleEntry[] = [
   { match: (p) => p === "/ring", title: "Ringemodus", description: "Ett lead om gangen – tast utfallet, så kommer neste" },
   { match: (p) => p === "/grok", title: "Grok-import", description: "Hent leads med Grok og legg dem rett inn i CRM-et" },
   { match: (p) => p === "/calendar", title: "Team-kalender", description: "Se salgsmøter og avtaler for hele teamet" },
-  { match: (p) => p === "/leads" || p.startsWith("/leads/"), title: "Mine leads", description: "Alle leads som er eller har vært tildelt deg" },
+  { match: (p) => p.startsWith("/leads/"), title: "Lead", hideTitle: true },
+  { match: (p) => p === "/leads", title: "Mine leads", description: "Alle leads som er eller har vært tildelt deg" },
   { match: (p) => p === "/admin/leads", title: "Alle leads", description: "Klassifiser niche, omfordel selgere, følg med på pipeline" },
   { match: (p) => p === "/admin/stats", title: "Statistikk", description: "Ytelse per selger — leads, vinnrate og verdi" },
   { match: (p) => p === "/admin/sellers", title: "Selgere", description: "Opprett og administrer brukere" },
@@ -41,17 +45,37 @@ function resolveTitle(pathname: string): TitleEntry {
   return TITLES.find((t) => t.match(pathname)) ?? { match: () => true, title: "Feelm Leads" };
 }
 
+/** Goes back to wherever you came from (Mine leads, Alle leads, ringemodus…). */
+function BackLink() {
+  const router = useRouter();
+  return (
+    <button
+      type="button"
+      onClick={() => (window.history.length > 1 ? router.back() : router.push("/leads"))}
+      className="flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-fg"
+    >
+      <ArrowLeft className="h-4 w-4" /> Tilbake
+    </button>
+  );
+}
+
 export function PageHeader({ profile, unread = 0 }: { profile: Profile; unread?: number }) {
   const pathname = usePathname();
-  const { title, description } = resolveTitle(pathname);
+  const { title, description, hideTitle } = resolveTitle(pathname);
   const name = profile.full_name ?? profile.email;
 
   return (
     <header className="flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
         <Wordmark className="mb-3 block text-2xl lg:hidden" />
-        <h1 className="display text-[40px] text-fg sm:text-5xl">{title}</h1>
-        {description && <p className="mt-2 text-sm text-muted">{description}</p>}
+        {hideTitle ? (
+          <BackLink />
+        ) : (
+          <>
+            <h1 className="display text-[40px] text-fg sm:text-5xl">{title}</h1>
+            {description && <p className="mt-2 text-sm text-muted">{description}</p>}
+          </>
+        )}
       </div>
       <div className="flex items-center gap-2">
         <NotificationBell unread={unread} />
