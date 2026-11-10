@@ -2,35 +2,13 @@ import { requireProfile } from "@/lib/dal";
 import { createClient } from "@/lib/supabase/server";
 import { LeadCard } from "@/components/lead-card";
 import { Card, CardContent } from "@/components/ui/card";
-import { Select } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button, buttonVariants } from "@/components/ui/button";
 import { LeadMap } from "@/components/leads/lead-map";
 import { ViewToggle } from "@/components/leads/view-toggle";
 import { LeadBoard } from "@/components/leads/lead-board";
-import { applyTodoFilter } from "@/lib/lead-filters";
-import { NewLeadForm } from "@/components/leads/new-lead-form";
-import { LogCallForm } from "@/components/leads/log-call-form";
-import Link from "next/link";
-import { PhoneCall } from "lucide-react";
-import { LEAD_STATUS_LABELS, FILMING_STATUS_LABELS } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { applyTodoFilter, callQueue } from "@/lib/lead-filters";
+import { TodoTiles } from "@/components/leads/todo-tiles";
+import { LeadsToolbar } from "@/components/leads/leads-toolbar";
 import type { Lead, LeadStatus, FilmingStatus, Niche, Profile } from "@/lib/types";
-
-function TodoChip({ label, href, active }: { label: string; href: string; active: boolean }) {
-  return (
-    <Link
-      href={href}
-      className={cn(
-        "rounded-full border border-line px-3 py-1 text-xs font-medium transition-colors",
-        active ? "border-brand/40 bg-brand-soft text-brand" : "text-muted hover:border-line-strong hover:text-fg"
-      )}
-    >
-      {label}
-    </Link>
-  );
-}
 
 export default async function LeadsPage({
   searchParams,
@@ -52,18 +30,29 @@ export default async function LeadsPage({
   const isBoard = view === "board";
   const search = (q ?? "").trim().toLowerCase();
 
-  let query = supabase
+  // All of the seller's leads once: the tiles count over this, the list
+  // narrows it with the dropdown filters, the todo filter and the search.
+  const { data: leadsRaw } = await supabase
     .from("leads")
     .select("*, niche:niches(*)")
     .eq("assigned_to", profile.id)
     .order("updated_at", { ascending: false });
+  const mine = (leadsRaw as Lead[] | null) ?? [];
 
-  if (status) query = query.eq("status", status as LeadStatus);
-  if (filming) query = query.eq("filming_status", filming as FilmingStatus);
-  if (quality === "phone") query = query.not("phone", "is", null);
+  const todoKeys = ["uncontacted", "no_answer", "overdue", "stale"] as const;
+  const todoCounts = Object.fromEntries(
+    await Promise.all(
+      todoKeys.map(async (k) => [k, (await applyTodoFilter(supabase, profile.id, mine, k)).length] as const)
+    )
+  ) as Record<(typeof todoKeys)[number], number>;
+  const queueCount = callQueue(await applyTodoFilter(supabase, profile.id, mine, todo)).length;
 
-  const { data: leadsRaw } = await query;
-  let leads = (leadsRaw as Lead[] | null) ?? [];
+  let leads = mine.filter(
+    (l) =>
+      (!status || l.status === (status as LeadStatus)) &&
+      (!filming || l.filming_status === (filming as FilmingStatus)) &&
+      (quality !== "phone" || !!l.phone)
+  );
 
   // "Å gjøre"-filtre for å hindre at leads faller mellom stolene.
   leads = await applyTodoFilter(supabase, profile.id, leads, todo);
@@ -100,87 +89,33 @@ export default async function LeadsPage({
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-1.5">
-          <TodoChip label="Alle" href={todoHref()} active={!todo} />
-          <TodoChip label="Ikke kontaktet" href={todoHref("uncontacted")} active={todo === "uncontacted"} />
-          <TodoChip label="Ikke svar" href={todoHref("no_answer")} active={todo === "no_answer"} />
-          <TodoChip label="Forfalt oppfølging" href={todoHref("overdue")} active={todo === "overdue"} />
-          <TodoChip label="Glemt (3d+)" href={todoHref("stale")} active={todo === "stale"} />
-        </div>
-        <ViewToggle
-          basePath="/leads"
-          params={{ status, filming, todo, quality, q }}
-          active={isMap ? "map" : isBoard ? "board" : "list"}
-          withBoard
-        />
-      </div>
-
-      <div className="flex justify-end">
-        <Link href={todo ? `/ring?todo=${todo}` : "/ring"} className={buttonVariants()}>
-          <PhoneCall /> Start ringing
-        </Link>
-      </div>
-
-      <NewLeadForm
-        niches={(niches as Niche[]) ?? []}
-        defaultNicheId={profile.active_niche_id}
+      <TodoTiles
+        active={todo ?? null}
+        queueCount={queueCount}
+        ringHref={todo ? `/ring?todo=${todo}` : "/ring"}
+        tiles={[
+          { key: null, label: "Alle", hint: "leads tildelt deg", count: mine.length, href: todoHref() },
+          { key: "uncontacted", label: "Ikke kontaktet", hint: "aldri ringt", count: todoCounts.uncontacted, href: todoHref("uncontacted") },
+          { key: "no_answer", label: "Ikke svar", hint: "ring tilbake", count: todoCounts.no_answer, href: todoHref("no_answer") },
+          { key: "overdue", label: "Forfalt", hint: "oppfølging over frist", count: todoCounts.overdue, href: todoHref("overdue"), urgent: true },
+          { key: "stale", label: "Glemt", hint: "tildelt for 3+ dager siden", count: todoCounts.stale, href: todoHref("stale"), urgent: true },
+        ]}
       />
 
-      <LogCallForm />
-
-      <Card>
-        <CardContent className="pt-5">
-          <form method="get" className="flex flex-wrap items-end gap-3">
-            {todo && <input type="hidden" name="todo" value={todo} />}
-            {view && <input type="hidden" name="view" value={view} />}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="lead-search" className="text-xs text-muted">
-                Søk
-              </Label>
-              <Input
-                id="lead-search"
-                name="q"
-                defaultValue={q ?? ""}
-                placeholder="Firma, kontakt, e-post eller telefon…"
-                className="w-64"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted">Status</label>
-              <Select name="status" defaultValue={status ?? ""} className="w-44">
-                <option value="">Alle</option>
-                {Object.entries(LEAD_STATUS_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted">Filming</label>
-              <Select name="filming" defaultValue={filming ?? ""} className="w-44">
-                <option value="">Alle</option>
-                {Object.entries(FILMING_STATUS_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted">Kvalitet</label>
-              <Select name="quality" defaultValue={quality ?? ""} className="w-40">
-                <option value="">Alle</option>
-                <option value="phone">Kun med telefon</option>
-              </Select>
-            </div>
-            <Button type="submit" variant="outline">
-              Filtrer
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      <LeadsToolbar
+        filters={{ q, status, filming, quality }}
+        hidden={{ todo, view }}
+        niches={(niches as Niche[]) ?? []}
+        defaultNicheId={profile.active_niche_id}
+        viewToggle={
+          <ViewToggle
+            basePath="/leads"
+            params={{ status, filming, todo, quality, q }}
+            active={isMap ? "map" : isBoard ? "board" : "list"}
+            withBoard
+          />
+        }
+      />
 
       {!leads?.length ? (
         <Card>

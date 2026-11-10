@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useActionState } from "react";
-import { Phone } from "lucide-react";
+import { Phone, X } from "lucide-react";
 import { logManualCall, type CallFormState } from "@/lib/actions/leads";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { CALL_OUTCOME_LABELS } from "@/lib/types";
 const initial: CallFormState = {};
 
 /** Logs a cold call to a company that isn't in the lead list. */
-export function LogCallForm() {
+export function LogCallForm({ onClose }: { onClose?: () => void } = {}) {
   const [state, formAction, isPending] = useActionState(logManualCall, initial);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -23,10 +23,15 @@ export function LogCallForm() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex-row items-center justify-between gap-3">
         <CardTitle className="flex items-center gap-2">
           <Phone className="h-4 w-4" /> Logg samtale (utenfor lista)
         </CardTitle>
+        {onClose && (
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+            <X className="h-4 w-4" /> Lukk
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         <form ref={formRef} action={formAction} className="flex flex-wrap items-end gap-3">

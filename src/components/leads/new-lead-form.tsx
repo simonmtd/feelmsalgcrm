@@ -16,11 +16,16 @@ const initialState: LeadFormState = {};
 export function NewLeadForm({
   niches,
   defaultNicheId,
+  onClose,
 }: {
   niches: Pick<Niche, "id" | "name">[];
   defaultNicheId?: string | null;
+  /** When given, the form is controlled by the parent: always open, and «Lukk» calls this. */
+  onClose?: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [openState, setOpen] = useState(false);
+  const open = onClose ? true : openState;
+  const close = onClose ?? (() => setOpen(false));
   const [state, formAction, isPending] = useActionState(createLead, initialState);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -46,7 +51,7 @@ export function NewLeadForm({
           <h2 className="eyebrow uppercase tracking-wide text-fg-2">
             Ny lead
           </h2>
-          <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
+          <Button type="button" variant="ghost" size="sm" onClick={close}>
             <X className="h-4 w-4" /> Lukk
           </Button>
         </div>

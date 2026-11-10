@@ -38,7 +38,7 @@ export function CallOutcomeButtons({
       {phone ? (
         <a
           href={`tel:${phone}`}
-          className="flex items-center justify-center gap-1.5 rounded-md border border-line bg-success-soft px-2 py-1.5 text-sm font-bold text-fg transition-transform hover:-translate-y-0.5"
+          className="flex items-center justify-center gap-2 rounded-lg bg-success-soft px-2 py-2 text-sm font-semibold text-success transition-colors hover:bg-success/20"
         >
           <Phone className="h-4 w-4" /> {phone}
         </a>
@@ -54,7 +54,7 @@ export function CallOutcomeButtons({
             type="button"
             disabled={isPending}
             onClick={() => register(key, label)}
-            className="flex items-center gap-1 rounded-md border border-line bg-surface px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-fg transition-colors hover:bg-surface-3 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-full border border-line px-2 py-1 text-xs text-muted transition-colors hover:border-line-strong hover:text-fg disabled:opacity-50"
           >
             <Icon className="h-3 w-3 shrink-0" /> {label}
           </button>
