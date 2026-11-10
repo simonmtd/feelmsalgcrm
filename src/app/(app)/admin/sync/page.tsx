@@ -35,7 +35,7 @@ export default async function AdminSyncPage() {
         <CardContent className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-ink/25 text-left text-xs uppercase text-wood-700">
+              <tr className="border-b border-line text-left text-[11px] font-medium uppercase tracking-wider text-subtle">
                 <th className="py-2 pr-4">Startet</th>
                 <th className="py-2 pr-4">Fullført</th>
                 <th className="py-2 pr-4">Status</th>
@@ -45,20 +45,20 @@ export default async function AdminSyncPage() {
             </thead>
             <tbody>
               {(runs as SyncRun[] | null)?.map((run) => (
-                <tr key={run.id} className="border-b border-ink/15">
+                <tr key={run.id} className="border-b border-line">
                   <td className="py-2 pr-4">{formatDateTime(run.started_at)}</td>
                   <td className="py-2 pr-4">{formatDateTime(run.finished_at)}</td>
                   <td className="py-2 pr-4">
                     <Badge variant={STATUS_VARIANT[run.status]}>{run.status}</Badge>
                   </td>
                   <td className="py-2 pr-4">{run.records_synced}</td>
-                  <td className="py-2 pr-4 text-red-600">{run.error ?? "–"}</td>
+                  <td className="py-2 pr-4 text-danger">{run.error ?? "–"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
           {!runs?.length && (
-            <p className="py-6 text-center text-sm text-wood-700">
+            <p className="py-6 text-center text-sm text-muted">
               Ingen sync-jobber kjørt ennå.
             </p>
           )}

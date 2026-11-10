@@ -20,8 +20,8 @@ function TodoChip({ label, href, active }: { label: string; href: string; active
     <Link
       href={href}
       className={cn(
-        "rounded-sm border-2 border-ink px-2.5 py-1 font-pixel text-[8px] uppercase tracking-wide shadow-[2px_2px_0_0_var(--color-ink)] transition-colors",
-        active ? "bg-gold-500 text-ink" : "bg-parchment text-wood-800 hover:bg-gold-100"
+        "rounded-full border border-line px-3 py-1 text-xs font-medium transition-colors",
+        active ? "border-brand/40 bg-brand-soft text-brand" : "text-muted hover:border-line-strong hover:text-fg"
       )}
     >
       {label}
@@ -152,7 +152,7 @@ export default async function LeadsPage({
           <form method="get" className="flex flex-wrap items-end gap-3">
             {todo && <input type="hidden" name="todo" value={todo} />}
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="lead-search" className="text-xs text-wood-700">
+              <Label htmlFor="lead-search" className="text-xs text-muted">
                 Søk
               </Label>
               <Input
@@ -164,7 +164,7 @@ export default async function LeadsPage({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-wood-700">Status</label>
+              <label className="text-xs font-medium text-muted">Status</label>
               <Select name="status" defaultValue={status ?? ""} className="w-44">
                 <option value="">Alle</option>
                 {Object.entries(LEAD_STATUS_LABELS).map(([value, label]) => (
@@ -175,7 +175,7 @@ export default async function LeadsPage({
               </Select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-wood-700">Filming</label>
+              <label className="text-xs font-medium text-muted">Filming</label>
               <Select name="filming" defaultValue={filming ?? ""} className="w-44">
                 <option value="">Alle</option>
                 {Object.entries(FILMING_STATUS_LABELS).map(([value, label]) => (
@@ -186,7 +186,7 @@ export default async function LeadsPage({
               </Select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-wood-700">Kvalitet</label>
+              <label className="text-xs font-medium text-muted">Kvalitet</label>
               <Select name="quality" defaultValue={quality ?? ""} className="w-40">
                 <option value="">Alle</option>
                 <option value="phone">Kun med telefon</option>
@@ -201,7 +201,7 @@ export default async function LeadsPage({
 
       {!leads?.length ? (
         <Card>
-          <CardContent className="pt-5 text-sm text-wood-700">
+          <CardContent className="pt-5 text-sm text-muted">
             {search
               ? `Ingen leads matcher søket «${q}».`
               : "Ingen leads matcher filteret."}

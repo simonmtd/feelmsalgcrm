@@ -24,8 +24,8 @@ export function NotificationsList({ notifications }: { notifications: Notificati
     return (
       <Card>
         <CardContent className="flex flex-col items-center gap-2 py-10 text-center">
-          <Bell className="h-6 w-6 text-wood-600" />
-          <p className="text-sm text-wood-700">Ingen varsler ennå.</p>
+          <Bell className="h-6 w-6 text-subtle" />
+          <p className="text-sm text-muted">Ingen varsler ennå.</p>
         </CardContent>
       </Card>
     );
@@ -37,25 +37,25 @@ export function NotificationsList({ notifications }: { notifications: Notificati
         const body = (
           <div
             className={cn(
-              "flex items-center gap-3 rounded-sm border-2 border-ink p-3 shadow-[2px_2px_0_0_var(--color-ink)] transition-colors hover:bg-gold-200",
-              n.read_at ? "bg-parchment" : "bg-gold-100"
+              "flex items-center gap-3 rounded-md border border-line p-3 transition-colors hover:bg-surface-3",
+              n.read_at ? "bg-surface" : "bg-brand-soft"
             )}
           >
             <span
               className={cn(
-                "flex h-9 w-9 shrink-0 items-center justify-center rounded-sm border-2 border-ink",
-                n.read_at ? "bg-wood-200 text-wood-700" : "bg-gold-400 text-ink"
+                "flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line",
+                n.read_at ? "bg-surface-3 text-muted" : "bg-brand-soft text-fg"
               )}
             >
               <Bell className="h-4 w-4" />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm text-ink">{n.message}</p>
-              <p className="mt-0.5 font-mono text-xs text-wood-600">
+              <p className="text-sm text-fg">{n.message}</p>
+              <p className="mt-0.5 text-xs text-subtle">
                 {formatDateTime(n.created_at)}
               </p>
             </div>
-            <ArrowRight className="h-4 w-4 shrink-0 text-wood-600" />
+            <ArrowRight className="h-4 w-4 shrink-0 text-subtle" />
           </div>
         );
 

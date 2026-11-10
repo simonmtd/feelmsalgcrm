@@ -1,9 +1,9 @@
 const AVATAR_TONES = [
-  "bg-gold-400 text-ink",
-  "bg-forest-400 text-ink",
-  "bg-himmel-300 text-ink",
-  "bg-wood-200 text-wood-900",
-  "bg-purple-300 text-ink",
+  "bg-brand-soft text-fg",
+  "bg-success-soft text-fg",
+  "bg-info-soft text-fg",
+  "bg-surface-3 text-fg",
+  "bg-violet-soft text-fg",
 ];
 
 export function hashString(value: string) {

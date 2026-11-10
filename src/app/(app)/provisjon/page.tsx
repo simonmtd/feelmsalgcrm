@@ -3,23 +3,12 @@ import { requireProfile } from "@/lib/dal";
 import { loadCommissionMeetings, groupBy } from "@/lib/commission-data";
 import { commissionMonth, commissionWeek, monthLabel, COMMISSION_PER_MEETING } from "@/lib/commission";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Stat } from "@/components/ui/stat";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 import { COMMISSION_STATUS_LABELS } from "@/lib/types";
 
 const STATUS_VARIANT = { pending: "amber", approved: "green", rejected: "red" } as const;
-
-function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <Card>
-      <CardContent className="pt-5">
-        <p className="font-pixel text-[10px] uppercase leading-relaxed text-wood-800">{label}</p>
-        <p className="mt-2 font-mono text-2xl font-bold text-ink">{value}</p>
-        {hint && <p className="mt-1 text-xs text-wood-700">{hint}</p>}
-      </CardContent>
-    </Card>
-  );
-}
 
 export default async function MyCommissionPage() {
   const profile = await requireProfile();
@@ -36,6 +25,7 @@ export default async function MyCommissionPage() {
     <div className="flex flex-col gap-6">
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat
+          accent
           label={`Godkjent ${monthLabel(thisMonth)}`}
           value={formatCurrency(sum(approvedThisMonth))}
           hint={`${approvedThisMonth.length} kvalifiserte møter`}
@@ -49,9 +39,9 @@ export default async function MyCommissionPage() {
       </div>
 
       <Card>
-        <CardContent className="pt-5 text-sm text-wood-800">
+        <CardContent className="pt-5 text-sm text-fg-2">
           Du får {formatCurrency(COMMISSION_PER_MEETING)} per kvalifiserte møte. Registrer møtet på{" "}
-          <Link href="/meetings" className="font-medium underline hover:text-ink">
+          <Link href="/meetings" className="font-medium underline hover:text-fg">
             Møter
           </Link>{" "}
           og huk av «Provisjonsmøte», eller trykk «Krev» på et møte du alt har lagt inn. Notat er
@@ -60,7 +50,7 @@ export default async function MyCommissionPage() {
       </Card>
 
       {meetings.length === 0 ? (
-        <p className="py-6 text-center text-sm text-wood-700">Ingen provisjonsmøter ennå.</p>
+        <p className="py-6 text-center text-sm text-muted">Ingen provisjonsmøter ennå.</p>
       ) : (
         groupBy(meetings, (m) => commissionWeek(m.starts_at).key).map(([key, ms]) => (
           <Card key={key}>
@@ -71,8 +61,8 @@ export default async function MyCommissionPage() {
               <table className="w-full text-sm">
                 <tbody>
                   {ms.map((m) => (
-                    <tr key={m.id} className="border-b border-ink/15 align-top">
-                      <td className="py-3 pr-4 font-mono text-xs text-wood-700">
+                    <tr key={m.id} className="border-b border-line align-top">
+                      <td className="py-3 pr-4 text-xs text-muted">
                         {new Date(m.starts_at).toLocaleDateString("nb-NO", {
                           timeZone: "Europe/Oslo",
                           weekday: "short",
@@ -81,10 +71,10 @@ export default async function MyCommissionPage() {
                         })}
                       </td>
                       <td className="py-3 pr-4">
-                        <p className="font-medium text-ink">{m.title}</p>
-                        {m.lead?.company_name && <p className="text-xs text-wood-700">{m.lead.company_name}</p>}
+                        <p className="font-medium text-fg">{m.title}</p>
+                        {m.lead?.company_name && <p className="text-xs text-muted">{m.lead.company_name}</p>}
                         {m.notes && (
-                          <p className="mt-1 max-w-md whitespace-pre-line text-xs italic text-wood-700">{m.notes}</p>
+                          <p className="mt-1 max-w-md whitespace-pre-line text-xs italic text-muted">{m.notes}</p>
                         )}
                       </td>
                       <td className="py-3 text-right">

@@ -28,11 +28,11 @@ import type { Lead, Meeting, MeetingType, Profile } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
 
 const MEETING_STYLES: Record<MeetingType, { bg: string; text: string; borderL: string }> = {
-  sales_meeting: { bg: "bg-gold-400", text: "text-ink", borderL: "border-l-gold-600" },
-  demo: { bg: "bg-himmel-300", text: "text-ink", borderL: "border-l-himmel-500" },
-  follow_up: { bg: "bg-forest-400", text: "text-ink", borderL: "border-l-forest-700" },
-  internal: { bg: "bg-wood-200", text: "text-wood-900", borderL: "border-l-wood-600" },
-  other: { bg: "bg-purple-300", text: "text-ink", borderL: "border-l-purple-500" },
+  sales_meeting: { bg: "bg-brand-soft", text: "text-fg", borderL: "border-l-gold-600" },
+  demo: { bg: "bg-info-soft", text: "text-fg", borderL: "border-l-himmel-500" },
+  follow_up: { bg: "bg-success-soft", text: "text-fg", borderL: "border-l-forest-700" },
+  internal: { bg: "bg-surface-3", text: "text-fg", borderL: "border-l-wood-600" },
+  other: { bg: "bg-violet-soft", text: "text-fg", borderL: "border-l-purple-500" },
 };
 
 const initialState: MeetingActionState = {};
@@ -79,7 +79,7 @@ export function TeamCalendar({
       <Card className="lg:w-72 lg:shrink-0">
         <CardContent className="flex flex-col gap-4 pt-6">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-wood-600" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -92,16 +92,16 @@ export function TeamCalendar({
               type="button"
               onClick={() => setSelectedSellerId(null)}
               className={cn(
-                "flex items-center gap-3 rounded-sm border-2 border-transparent p-2.5 text-left transition-colors hover:bg-gold-100",
-                selectedSellerId === null && "border-ink bg-gold-200 shadow-[2px_2px_0_0_var(--color-ink)]"
+                "flex items-center gap-3 rounded-md border border-transparent p-2.5 text-left transition-colors hover:bg-surface-3",
+                selectedSellerId === null && "border-line bg-brand-soft "
               )}
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border-2 border-ink bg-wood-900 font-pixel text-[10px] text-gold-100">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-line bg-surface eyebrow text-fg">
                 Alle
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-sm font-semibold text-ink">Hele teamet</span>
-                <span className="block truncate text-xs text-wood-700">{team.length} personer</span>
+                <span className="block truncate text-sm font-semibold text-fg">Hele teamet</span>
+                <span className="block truncate text-xs text-muted">{team.length} personer</span>
               </span>
             </button>
             {filteredTeam.map((member) => (
@@ -110,30 +110,30 @@ export function TeamCalendar({
                 type="button"
                 onClick={() => setSelectedSellerId(member.id === selectedSellerId ? null : member.id)}
                 className={cn(
-                  "flex items-center gap-3 rounded-sm border-2 border-transparent p-2.5 text-left transition-colors hover:bg-gold-100",
-                  selectedSellerId === member.id && "border-ink bg-gold-200 shadow-[2px_2px_0_0_var(--color-ink)]"
+                  "flex items-center gap-3 rounded-md border border-transparent p-2.5 text-left transition-colors hover:bg-surface-3",
+                  selectedSellerId === member.id && "border-line bg-brand-soft "
                 )}
               >
                 <span
                   className={cn(
-                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border-2 border-ink text-sm font-bold",
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-line text-sm font-bold",
                     avatarToneFor(member.id)
                   )}
                 >
                   {initialsFor(member.full_name ?? member.email)}
                 </span>
                 <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold text-ink">
+                  <span className="block truncate text-sm font-semibold text-fg">
                     {member.full_name ?? member.email}
                   </span>
-                  <span className="block truncate text-xs text-wood-700">
+                  <span className="block truncate text-xs text-muted">
                     {member.role === "admin" ? "Admin" : member.active_niche?.name ?? "Ingen niche valgt"}
                   </span>
                 </span>
               </button>
             ))}
             {!filteredTeam.length && (
-              <p className="px-2.5 py-4 text-center text-sm text-wood-700">Fant ingen i teamet.</p>
+              <p className="px-2.5 py-4 text-center text-sm text-muted">Fant ingen i teamet.</p>
             )}
           </div>
         </CardContent>
@@ -146,7 +146,7 @@ export function TeamCalendar({
               <Button type="button" variant="outline" size="sm" onClick={() => setWeekStart((w) => addDays(w, -7))}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="min-w-[11rem] text-center text-sm font-medium text-wood-800">
+              <span className="min-w-[11rem] text-center text-sm font-medium text-fg-2">
                 {formatWeekRange(weekStart)}
               </span>
               <Button type="button" variant="outline" size="sm" onClick={() => setWeekStart((w) => addDays(w, 7))}>
@@ -237,8 +237,8 @@ export function TeamCalendar({
                 </div>
                 <div className="flex items-end gap-3 sm:col-span-2 lg:col-span-4">
                   <Button type="submit">Legg til møte</Button>
-                  {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
-                  {state?.success && <p className="text-sm text-green-600">{state.success}</p>}
+                  {state?.error && <p className="text-sm text-danger">{state.error}</p>}
+                  {state?.success && <p className="text-sm text-success">{state.success}</p>}
                 </div>
               </form>
             </CardContent>
@@ -254,13 +254,13 @@ export function TeamCalendar({
                   const today = isSameDay(day, new Date());
                   return (
                     <div key={day.toISOString()} className="pb-3 text-center">
-                      <p className="text-xs font-medium uppercase tracking-wide text-wood-600">
+                      <p className="text-xs font-medium uppercase tracking-wide text-subtle">
                         {WEEKDAY_LABELS[day.getDay() === 0 ? 6 : day.getDay() - 1]}
                       </p>
                       <p
                         className={cn(
-                          "mx-auto mt-1 flex h-7 w-7 items-center justify-center rounded-sm border-2 border-ink text-sm font-bold",
-                          today ? "border-2 border-ink bg-gold-500 text-ink" : "text-wood-800"
+                          "mx-auto mt-1 flex h-7 w-7 items-center justify-center rounded-md border border-line text-sm font-bold",
+                          today ? "bg-brand text-brand-fg" : "text-fg-2"
                         )}
                       >
                         {day.getDate()}
@@ -275,7 +275,7 @@ export function TeamCalendar({
                   {hours.map((h, i) => (
                     <div
                       key={h}
-                      className="absolute right-2 -translate-y-1/2 text-xs text-wood-600"
+                      className="absolute right-2 -translate-y-1/2 text-xs text-subtle"
                       style={{ top: i * CALENDAR_ROW_HEIGHT }}
                     >
                       {formatHourLabel(h)}
@@ -288,13 +288,13 @@ export function TeamCalendar({
                   return (
                     <div
                       key={day.toISOString()}
-                      className="relative border-l border-ink/15"
+                      className="relative border-l border-line"
                       style={{ height: gridHeight }}
                     >
                       {hours.map((h, i) => (
                         <div
                           key={h}
-                          className="absolute left-0 right-0 border-t border-ink/15"
+                          className="absolute left-0 right-0 border-t border-line"
                           style={{ top: i * CALENDAR_ROW_HEIGHT }}
                         />
                       ))}
@@ -319,7 +319,7 @@ export function TeamCalendar({
                           <div
                             key={meeting.id}
                             className={cn(
-                              "absolute left-1 right-1 flex flex-col overflow-hidden rounded-sm border border-ink border-l-4 px-1.5 py-1 shadow-[1px_1px_0_0_var(--color-ink)]",
+                              "absolute left-1 right-1 flex flex-col overflow-hidden rounded-md border border-line border-l-4 px-1.5 py-1 ",
                               styles.bg,
                               styles.borderL
                             )}
@@ -344,12 +344,12 @@ export function TeamCalendar({
                               {meeting.title}
                             </p>
                             {showTime && (
-                              <p className="truncate text-[10px] leading-[13px] text-wood-800">
+                              <p className="truncate text-[10px] leading-[13px] text-fg-2">
                                 {formatTimeRange(meeting.starts_at, meeting.ends_at)}
                               </p>
                             )}
                             {showSeller && (
-                              <p className="truncate text-[10px] leading-[13px] text-wood-700">
+                              <p className="truncate text-[10px] leading-[13px] text-muted">
                                 {meeting.seller?.full_name ?? "Ukjent"}
                               </p>
                             )}

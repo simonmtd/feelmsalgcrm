@@ -52,7 +52,7 @@ export function LeadCombobox({ leads }: { leads: LeadOption[] }) {
       <input type="hidden" name="new_customer" value={newCustomer} />
 
       <div className="relative">
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-wood-600" />
+        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" />
         <Input
           value={query}
           placeholder="Søk kunde, eller skriv nytt navn…"
@@ -71,14 +71,14 @@ export function LeadCombobox({ leads }: { leads: LeadOption[] }) {
       </div>
 
       {(selectedId || newCustomer) && (
-        <p className="mt-1 text-xs text-forest-700">
+        <p className="mt-1 text-xs text-success">
           {selectedId ? "✓ Valgt kunde" : `✓ Ny kunde: «${newCustomer}»`}
         </p>
       )}
 
       {open && (
         <ul
-          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-sm border-2 border-ink bg-parchment shadow-[3px_3px_0_0_var(--color-ink)]"
+          className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-md border border-line bg-surface "
           onMouseDown={() => {
             // Keep the dropdown alive through the click (cancel blur-close).
             if (blurTimer.current) clearTimeout(blurTimer.current);
@@ -89,7 +89,7 @@ export function LeadCombobox({ leads }: { leads: LeadOption[] }) {
               <button
                 type="button"
                 onClick={addNew}
-                className="flex w-full items-center gap-2 border-b border-ink/15 px-3 py-2 text-left text-sm font-medium text-forest-700 hover:bg-gold-200"
+                className="flex w-full items-center gap-2 border-b border-line px-3 py-2 text-left text-sm font-medium text-success hover:bg-surface-3"
               >
                 <Plus className="h-4 w-4" /> Legg til «{query.trim()}» som ny kunde
               </button>
@@ -100,20 +100,20 @@ export function LeadCombobox({ leads }: { leads: LeadOption[] }) {
               <button
                 type="button"
                 onClick={() => pickLead(l)}
-                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-wood-100"
+                className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-surface-2"
               >
                 <span>
-                  <span className="text-ink">{l.company_name ?? "Ukjent firma"}</span>
+                  <span className="text-fg">{l.company_name ?? "Ukjent firma"}</span>
                   {l.contact_name && (
-                    <span className="block text-xs text-wood-700">{l.contact_name}</span>
+                    <span className="block text-xs text-muted">{l.contact_name}</span>
                   )}
                 </span>
-                {selectedId === l.id && <Check className="h-4 w-4 text-forest-700" />}
+                {selectedId === l.id && <Check className="h-4 w-4 text-success" />}
               </button>
             </li>
           ))}
           {matches.length === 0 && !canAddNew && (
-            <li className="px-3 py-2 text-sm text-wood-600">Ingen treff.</li>
+            <li className="px-3 py-2 text-sm text-subtle">Ingen treff.</li>
           )}
         </ul>
       )}

@@ -43,7 +43,7 @@ export function NewLeadForm({
     <Card>
       <CardContent className="pt-5">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-pixel text-[11px] uppercase tracking-wide text-wood-800">
+          <h2 className="eyebrow uppercase tracking-wide text-fg-2">
             Ny lead
           </h2>
           <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
@@ -94,8 +94,8 @@ export function NewLeadForm({
             <Button type="submit" disabled={isPending}>
               {isPending ? "Lagrer …" : "Legg til lead"}
             </Button>
-            {state.error && <p className="text-sm text-red-600">{state.error}</p>}
-            {state.success && <p className="text-sm text-forest-700">{state.success}</p>}
+            {state.error && <p className="text-sm text-danger">{state.error}</p>}
+            {state.success && <p className="text-sm text-success">{state.success}</p>}
           </div>
         </form>
       </CardContent>

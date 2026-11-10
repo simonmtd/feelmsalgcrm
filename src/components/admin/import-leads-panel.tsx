@@ -186,19 +186,19 @@ export function ImportLeadsPanel() {
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <p className="text-sm text-wood-700">
+        <p className="text-sm text-muted">
           Eksporter en liste fra Apollo.io som CSV og last den opp her. Leadsene kommer inn
           ferdig utfylt med telefon, e-post, firma og tittel — helt gratis (ingen credits).
           De havner i pool-en så du kan fordele dem og sette nisje som vanlig. Duplikater og
           utenlandske telefonnumre filtreres automatisk bort.
         </p>
 
-        <label className="flex w-fit items-center gap-2 text-sm text-wood-800">
+        <label className="flex w-fit items-center gap-2 text-sm text-fg-2">
           <input
             type="checkbox"
             checked={requirePhone}
             onChange={(e) => setRequirePhone(e.target.checked)}
-            className="h-4 w-4 accent-gold-500"
+            className="h-4 w-4 accent-brand"
           />
           Kun leads med (norsk) telefonnummer
         </label>
@@ -214,7 +214,7 @@ export function ImportLeadsPanel() {
           <Button type="button" variant="outline" onClick={() => inputRef.current?.click()}>
             <Upload className="h-4 w-4" /> Velg CSV-fil
           </Button>
-          {fileName && <span className="text-sm text-wood-800">{fileName}</span>}
+          {fileName && <span className="text-sm text-fg-2">{fileName}</span>}
           {rows.length > 0 && (
             <Button type="button" disabled={isPending} onClick={doImport}>
               {isPending ? "Importerer…" : `Importer ${rows.length} leads`}
@@ -223,12 +223,12 @@ export function ImportLeadsPanel() {
         </div>
 
         {rows.length > 0 && (
-          <div className="rounded-sm border-2 border-ink/20 bg-parchment/60 p-3 text-xs text-wood-800">
+          <div className="rounded-md border border-line bg-surface-2 p-3 text-xs text-fg-2">
             <p className="mb-1 font-medium">
               Forhåndsvisning ({rows.filter((r) => r.company_name).length} av {rows.length} har
               firmanavn):
             </p>
-            <ul className="flex flex-col gap-0.5 font-mono">
+            <ul className="flex flex-col gap-0.5">
               {rows.slice(0, 3).map((r, i) => (
                 <li key={i}>
                   {r.company_name || "⚠️ (mangler firma)"} · {r.contact_name || "–"} ·{" "}
@@ -237,15 +237,15 @@ export function ImportLeadsPanel() {
               ))}
             </ul>
             {rows.filter((r) => r.company_name).length === 0 && (
-              <p className="mt-1 text-red-600">
+              <p className="mt-1 text-danger">
                 Fant ingen firmanavn – si ifra hvilken kolonne firmaet står i, så mapper jeg den.
               </p>
             )}
           </div>
         )}
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {msg && <p className="text-sm text-forest-700">{msg}</p>}
+        {error && <p className="text-sm text-danger">{error}</p>}
+        {msg && <p className="text-sm text-success">{msg}</p>}
       </CardContent>
     </Card>
   );

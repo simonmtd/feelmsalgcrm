@@ -37,7 +37,7 @@ export default async function AdminAuditPage() {
       <CardContent className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-ink/25 text-left text-xs uppercase text-wood-700">
+            <tr className="border-b border-line text-left text-[11px] font-medium uppercase tracking-wider text-subtle">
               <th className="py-2 pr-4">Tidspunkt</th>
               <th className="py-2 pr-4">Bruker</th>
               <th className="py-2 pr-4">Handling</th>
@@ -46,8 +46,8 @@ export default async function AdminAuditPage() {
           </thead>
           <tbody>
             {entries.map((entry) => (
-              <tr key={entry.id} className="border-b border-ink/15">
-                <td className="whitespace-nowrap py-2 pr-4 font-mono text-xs text-wood-700">
+              <tr key={entry.id} className="border-b border-line">
+                <td className="whitespace-nowrap py-2 pr-4 text-xs text-muted">
                   {formatDateTime(entry.created_at)}
                 </td>
                 <td className="py-2 pr-4">{entry.actor_email}</td>
@@ -56,13 +56,13 @@ export default async function AdminAuditPage() {
                     {AUDIT_ACTION_LABELS[entry.action] ?? entry.action}
                   </Badge>
                 </td>
-                <td className="py-2 pr-4 text-wood-800">{describeDetails(entry)}</td>
+                <td className="py-2 pr-4 text-fg-2">{describeDetails(entry)}</td>
               </tr>
             ))}
           </tbody>
         </table>
         {!entries.length && (
-          <p className="py-6 text-center text-sm text-wood-700">Ingen aktivitet logget ennå.</p>
+          <p className="py-6 text-center text-sm text-muted">Ingen aktivitet logget ennå.</p>
         )}
       </CardContent>
     </Card>

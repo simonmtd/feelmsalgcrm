@@ -2,110 +2,84 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  ListChecks,
-  CalendarDays,
-  CalendarCheck,
-  Handshake,
-  Building2,
-  Users,
-  Tags,
-  RefreshCw,
-  Settings,
-  BarChart3,
-  ScrollText,
-  LogOut,
-  Clapperboard,
-  Bot,
-  Coins,
-  type LucideIcon,
-} from "lucide-react";
+import { LogOut } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
+import { initialsFor } from "@/lib/avatar-color";
+import { navSections, isActive } from "@/components/nav-links";
 import { cn } from "@/lib/utils";
 import type { Profile } from "@/lib/types";
 
-interface NavLink {
-  href: string;
-  label: string;
-  icon: LucideIcon;
+/** Feelm wordmark: the brush font in brand pink, like feelm.no. */
+export function Wordmark({ className }: { className?: string }) {
+  return (
+    <span className={cn("font-brush text-[28px] leading-none text-brand", className)}>
+      feelm
+    </span>
+  );
 }
 
-const adminExtraLinks: NavLink[] = [
-  { href: "/admin/leads", label: "Alle leads", icon: Building2 },
-  { href: "/admin/provisjon", label: "Provisjon", icon: Coins },
-  { href: "/admin/stats", label: "Statistikk", icon: BarChart3 },
-  { href: "/admin/sellers", label: "Selgere", icon: Users },
-  { href: "/admin/niches", label: "Nicher", icon: Tags },
-  { href: "/admin/sync", label: "Sync", icon: RefreshCw },
-  { href: "/admin/audit", label: "Aktivitetslogg", icon: ScrollText },
-  { href: "/admin/settings", label: "Innstillinger", icon: Settings },
-];
-
+/** Desktop sidebar (lg+): labelled sections, user + sign-out at the bottom. */
 export function Sidebar({ profile }: { profile: Profile }) {
   const pathname = usePathname();
-  const isAdmin = profile.role === "admin";
-  const links: NavLink[] = isAdmin
-    ? [
-        { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-        { href: "/leads", label: "Mine leads", icon: ListChecks },
-        { href: "/calendar", label: "Kalender", icon: CalendarDays },
-        { href: "/meetings", label: "Møter", icon: Handshake },
-        { href: "/grok", label: "Grok-import", icon: Bot },
-        ...adminExtraLinks,
-      ]
-    : [
-        { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-        { href: "/today", label: "Dagens leads", icon: CalendarCheck },
-        { href: "/leads", label: "Mine leads", icon: ListChecks },
-        { href: "/meetings", label: "Mine møter", icon: Handshake },
-        { href: "/provisjon", label: "Min provisjon", icon: Coins },
-        { href: "/calendar", label: "Kalender", icon: CalendarDays },
-        { href: "/grok", label: "Grok-import", icon: Bot },
-      ];
+  const name = profile.full_name ?? profile.email;
 
   return (
-    <aside className="sticky top-3 flex h-[calc(100vh-6rem)] w-[76px] shrink-0 flex-col items-center gap-4 rounded-md border-2 border-ink bg-gradient-to-b from-wood-700 to-wood-900 py-5 shadow-[4px_4px_0_0_var(--color-ink)] sm:top-4">
-      <Link
-        href="/dashboard"
-        title="Feelm Leads"
-        className="flex h-11 w-11 items-center justify-center rounded-sm border-2 border-ink bg-gold-500 text-ink shadow-[2px_2px_0_0_var(--color-ink)] transition-colors hover:bg-gold-400"
-      >
-        <Clapperboard className="h-5 w-5" />
+    <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-line bg-bg lg:flex">
+      <Link href="/dashboard" className="flex items-baseline gap-2 px-5 pb-6 pt-6">
+        <Wordmark />
+        <span className="eyebrow text-subtle">Leads</span>
       </Link>
 
-      <div className="h-0.5 w-8 shrink-0 bg-wood-500" />
-
-      <nav className="flex flex-1 flex-col items-center gap-1.5">
-        {links.map((link) => {
-          const active = pathname === link.href || pathname.startsWith(link.href + "/");
-          const Icon = link.icon;
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              title={link.label}
-              className={cn(
-                "flex h-11 w-11 items-center justify-center rounded-sm border-2 border-transparent text-wood-200 transition-colors hover:bg-wood-600 hover:text-gold-100",
-                active &&
-                  "border-ink bg-gold-500 text-ink shadow-[2px_2px_0_0_var(--color-ink)] hover:bg-gold-500 hover:text-ink"
-              )}
-            >
-              <Icon className="h-5 w-5" />
-            </Link>
-          );
-        })}
+      <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-3">
+        {navSections(profile).map((section) => (
+          <div key={section.title} className="flex flex-col gap-0.5">
+            <p className="eyebrow px-2 pb-1.5 text-subtle">{section.title}</p>
+            {section.links.map((link) => {
+              const active = isActive(pathname, link.href);
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={cn(
+                    "group relative flex items-center gap-2.5 rounded-lg px-2 py-[7px] text-sm text-muted transition-colors hover:bg-surface hover:text-fg",
+                    active && "bg-surface-2 font-medium text-fg hover:bg-surface-2"
+                  )}
+                >
+                  {active && <span className="absolute -left-3 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-brand" />}
+                  <Icon className={cn("h-4 w-4 shrink-0", active ? "text-brand" : "text-subtle group-hover:text-muted")} />
+                  {link.label}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
-      <form action={signOut}>
-        <button
-          type="submit"
-          title="Logg ut"
-          className="flex h-11 w-11 items-center justify-center rounded-sm text-wood-200 transition-colors hover:bg-red-900 hover:text-red-200"
+      <div className="flex items-center gap-2.5 border-t border-line p-3">
+        <Link
+          href="/account"
+          className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg p-1.5 transition-colors hover:bg-surface"
+          title="Min konto"
         >
-          <LogOut className="h-5 w-5" />
-        </button>
-      </form>
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-semibold text-brand">
+            {initialsFor(name)}
+          </span>
+          <span className="min-w-0 leading-tight">
+            <span className="block truncate text-sm font-medium text-fg">{name}</span>
+            <span className="block text-xs text-subtle">{profile.role === "admin" ? "Admin" : "Selger"}</span>
+          </span>
+        </Link>
+        <form action={signOut}>
+          <button
+            type="submit"
+            title="Logg ut"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-subtle transition-colors hover:bg-danger-soft hover:text-danger"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </form>
+      </div>
     </aside>
   );
 }

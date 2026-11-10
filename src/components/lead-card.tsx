@@ -22,14 +22,14 @@ export function LeadCard({
       <CardContent className="flex h-full flex-col gap-2 pt-5">
         <Link
           href={`/leads/${lead.id}`}
-          className="group flex flex-col gap-2 rounded-sm transition-colors hover:bg-gold-100"
+          className="group flex flex-col gap-2 rounded-md transition-colors hover:bg-surface-3"
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-ink group-hover:underline">
+              <p className="truncate text-sm font-semibold text-fg group-hover:underline">
                 {lead.company_name ?? "Ukjent firma"}
               </p>
-              <p className="truncate text-xs text-wood-700">{lead.contact_name ?? "–"}</p>
+              <p className="truncate text-xs text-muted">{lead.contact_name ?? "–"}</p>
             </div>
             {lead.niche && (
               <Badge variant="default" className="shrink-0">
@@ -46,25 +46,25 @@ export function LeadCard({
             </Badge>
           </div>
           {lead.email && (
-            <p className="flex items-center gap-1.5 truncate text-xs text-wood-700">
+            <p className="flex items-center gap-1.5 truncate text-xs text-muted">
               <Mail className="h-3 w-3 shrink-0" /> {lead.email}
             </p>
           )}
           {lead.deal_size != null && (
-            <p className="font-mono text-sm font-bold text-wood-900">
+            <p className="text-sm font-bold text-fg">
               {formatCurrency(lead.deal_size)}
             </p>
           )}
         </Link>
 
         {/* Call + log an outcome straight from the card. */}
-        <div className="mt-auto border-t border-ink/15 pt-2">
+        <div className="mt-auto border-t border-line pt-2">
           <CallOutcomeButtons leadId={lead.id} phone={lead.phone} />
         </div>
 
         {sellers && (
-          <div className="flex flex-col gap-1 border-t border-ink/15 pt-2">
-            <span className="text-[10px] font-medium uppercase tracking-wide text-wood-600">
+          <div className="flex flex-col gap-1 border-t border-line pt-2">
+            <span className="text-[10px] font-medium uppercase tracking-wide text-subtle">
               Tildel selger
             </span>
             <LeadAssignSelect

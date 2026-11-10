@@ -39,7 +39,7 @@ export function GrokInstructionsCard({ instructions }: { instructions: string })
           {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
           {copied ? "Kopiert!" : "Kopier instruksjoner"}
         </Button>
-        <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-sm border-2 border-ink/20 bg-white/70 p-3 font-mono text-xs text-wood-900">
+        <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-md border border-line bg-surface-2 p-3 text-xs text-fg">
           {instructions}
         </pre>
       </CardContent>
@@ -84,7 +84,7 @@ export function GrokPastePanel({ isAdmin }: { isAdmin: boolean }) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={'```json\n{ "leads": [ … ] }\n```'}
-          className="min-h-48 font-mono text-xs"
+          className="min-h-48 text-xs"
         />
         <Button type="button" className="w-fit" disabled={isPending || !text.trim()} onClick={doImport}>
           {isPending ? "Legger inn…" : "Legg inn leads"}
@@ -92,19 +92,19 @@ export function GrokPastePanel({ isAdmin }: { isAdmin: boolean }) {
 
         {result && (
           <div className="flex flex-col gap-3 text-sm">
-            <p className={result.ok ? "font-medium text-forest-700" : "text-red-600"}>{result.message}</p>
+            <p className={result.ok ? "font-medium text-success" : "text-danger"}>{result.message}</p>
 
             {result.created.length > 0 && (
               <ul className="flex flex-col gap-1">
                 {result.created.map((c) => (
-                  <li key={c.id} className="text-wood-900">
+                  <li key={c.id} className="text-fg">
                     ✅{" "}
-                    <Link href={`/leads/${c.id}`} className="underline hover:text-forest-700">
+                    <Link href={`/leads/${c.id}`} className="underline hover:text-success">
                       {c.label}
                     </Link>{" "}
-                    <span className="text-wood-700">→ {c.assignedTo}</span>
+                    <span className="text-muted">→ {c.assignedTo}</span>
                     {c.warnings?.map((w) => (
-                      <span key={w} className="block pl-5 text-xs text-wood-700">
+                      <span key={w} className="block pl-5 text-xs text-muted">
                         {w}
                       </span>
                     ))}
@@ -116,8 +116,8 @@ export function GrokPastePanel({ isAdmin }: { isAdmin: boolean }) {
             {result.rejected.length > 0 && (
               <ul className="flex flex-col gap-1">
                 {result.rejected.map((r, i) => (
-                  <li key={i} className="text-wood-800">
-                    ❌ {r.label}: <span className="text-red-700">{r.message}</span>
+                  <li key={i} className="text-fg-2">
+                    ❌ {r.label}: <span className="text-danger">{r.message}</span>
                     {isAdmin && r.duplicateOf && (
                       <>
                         {" "}

@@ -41,12 +41,12 @@ export default async function TodayPage() {
 
   return (
     <>
-      <div className="rounded-sm border-2 border-ink bg-wood-900 p-3 shadow-[4px_4px_0_0_var(--color-ink)]">
+      <div className="rounded-md border border-line bg-surface p-3 ">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <p className="font-pixel text-[10px] uppercase leading-relaxed tracking-wide text-gold-100">
+          <p className="eyebrow uppercase leading-relaxed tracking-wide text-fg">
             {handled}/{leads.length} fulgt opp i dag
           </p>
-          <p className="font-mono text-[11px] text-wood-200">
+          <p className="text-[11px] text-fg-2">
             {dateLabel} · potensiell verdi {formatCurrency(totalValue)}
           </p>
         </div>
@@ -55,7 +55,7 @@ export default async function TodayPage() {
 
       {statusCounts.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-wood-800">Status i dag:</span>
+          <span className="text-sm text-fg-2">Status i dag:</span>
           {statusCounts.map(({ status, count }) => (
             <Badge key={status} variant={LEAD_STATUS_VARIANT[status]}>
               {LEAD_STATUS_LABELS[status]}: {count}
@@ -69,17 +69,17 @@ export default async function TodayPage() {
       {!leads.length ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
-            <p className="font-pixel text-[10px] uppercase leading-relaxed text-wood-800">
+            <p className="eyebrow uppercase leading-relaxed text-fg-2">
               Ingen leads tildelt i dag
             </p>
-            <p className="max-w-md text-sm text-wood-700">
+            <p className="max-w-md text-sm text-muted">
               Nye leads fordeles automatisk hver morgen basert på nichen du har valgt
               {profile.active_niche?.name ? ` (${profile.active_niche.name})` : ""}. En admin kan
               også fordele leads til deg manuelt.
             </p>
             <Link
               href="/leads"
-              className="font-pixel text-[10px] uppercase tracking-wide text-forest-700 hover:text-forest-500"
+              className="eyebrow uppercase tracking-wide text-success hover:text-success"
             >
               Se alle mine leads
             </Link>

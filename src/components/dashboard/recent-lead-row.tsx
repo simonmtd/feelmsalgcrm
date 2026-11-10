@@ -24,21 +24,21 @@ export function RecentLeadRow({ lead }: { lead: Lead }) {
   return (
     <Link
       href={`/leads/${lead.id}`}
-      className="flex items-center gap-3 rounded-sm border-2 border-ink bg-wood-100 p-2.5 shadow-[2px_2px_0_0_var(--color-ink)] transition-colors hover:bg-gold-100"
+      className="flex items-center gap-3 rounded-lg border border-line bg-surface-2/60 p-3 transition-colors hover:border-line-strong hover:bg-surface-2"
     >
       <div
         className={cn(
-          "flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border-2 border-ink text-sm font-bold shadow-[1px_1px_0_0_var(--color-ink)]",
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
           avatarToneFor(lead.id)
         )}
       >
         {initialsFor(lead)}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-ink">
+        <p className="truncate text-sm font-semibold text-fg">
           {lead.company_name ?? "Ukjent firma"}
         </p>
-        <p className="truncate text-xs text-wood-700">{lead.contact_name ?? "–"}</p>
+        <p className="truncate text-xs text-muted">{lead.contact_name ?? "–"}</p>
       </div>
       <div className="flex max-w-[45%] shrink-0 flex-col items-end gap-1.5">
         {lead.niche && (
@@ -46,7 +46,7 @@ export function RecentLeadRow({ lead }: { lead: Lead }) {
             {lead.niche.name}
           </Badge>
         )}
-        <span className="whitespace-nowrap font-mono text-[11px] text-wood-600">
+        <span className="whitespace-nowrap text-[11px] text-subtle">
           {formatDate(lead.assigned_date ?? lead.created_at)}
         </span>
       </div>

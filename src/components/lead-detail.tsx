@@ -83,7 +83,7 @@ export function LeadDetail({
   return (
     <div className="flex flex-col gap-6">
       {lead.duplicate_of && (
-        <div className="rounded-sm border-2 border-red-600 bg-red-50 p-3 text-sm font-medium text-red-700 shadow-[3px_3px_0_0_var(--color-ink)]">
+        <div className="rounded-md border border-danger bg-danger-soft p-3 text-sm font-medium text-danger ">
           ⚠️ Dette er et duplikat av et eksisterende lead — samme person finnes fra
           en annen kilde. Ikke ring denne.
         </div>
@@ -98,12 +98,12 @@ export function LeadDetail({
             {lead.phone ? (
               <a
                 href={`tel:${lead.phone}`}
-                className="flex items-center justify-center gap-2 rounded-sm border-2 border-ink bg-forest-600 px-4 py-3 text-lg font-bold text-parchment shadow-[3px_3px_0_0_var(--color-ink)] transition-transform hover:-translate-y-0.5"
+                className="flex items-center justify-center gap-2 rounded-md border border-line bg-success-soft px-4 py-3 text-lg font-bold text-fg transition-transform hover:-translate-y-0.5"
               >
                 <Phone className="h-5 w-5" /> Ring {lead.phone}
               </a>
             ) : (
-              <div className="flex items-center justify-center gap-2 rounded-sm border-2 border-dashed border-ink/40 px-4 py-3 text-sm text-wood-600">
+              <div className="flex items-center justify-center gap-2 rounded-md border border-dashed border-line-strong px-4 py-3 text-sm text-subtle">
                 <PhoneOff className="h-4 w-4" /> Ingen telefon — bruk «Berik» eller «Rediger»
               </div>
             )}
@@ -130,7 +130,7 @@ export function LeadDetail({
                 </Button>
               ))}
             </div>
-            {outcomeMsg && <p className="text-sm text-forest-700">{outcomeMsg}</p>}
+            {outcomeMsg && <p className="text-sm text-success">{outcomeMsg}</p>}
           </CardContent>
         </Card>
 
@@ -141,7 +141,7 @@ export function LeadDetail({
                 <CardTitle className="text-lg">
                   {lead.company_name ?? "Ukjent firma"}
                 </CardTitle>
-                <p className="text-sm text-wood-700">{lead.contact_name ?? "–"}</p>
+                <p className="text-sm text-muted">{lead.contact_name ?? "–"}</p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {lead.niche && <Badge>{lead.niche.name}</Badge>}
@@ -171,7 +171,7 @@ export function LeadDetail({
               </div>
             </div>
             {enrichMsg && (
-              <p className="mt-2 text-xs text-forest-700">{enrichMsg}</p>
+              <p className="mt-2 text-xs text-success">{enrichMsg}</p>
             )}
           </CardHeader>
           {editingContact ? (
@@ -225,8 +225,8 @@ export function LeadDetail({
           ) : (
             <CardContent className="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <p className="text-xs text-wood-700">E-post</p>
-                <p className="text-ink">
+                <p className="text-xs text-muted">E-post</p>
+                <p className="text-fg">
                   {lead.email ? (
                     <a href={`mailto:${lead.email}`} className="hover:underline">
                       {lead.email}
@@ -237,20 +237,20 @@ export function LeadDetail({
                 </p>
               </div>
               <div>
-                <p className="text-xs text-wood-700">Telefon</p>
-                <p className="text-ink">
+                <p className="text-xs text-muted">Telefon</p>
+                <p className="text-fg">
                   {lead.phone ? (
-                    <a href={`tel:${lead.phone}`} className="font-mono hover:underline">
+                    <a href={`tel:${lead.phone}`} className="hover:underline">
                       {lead.phone}
                     </a>
                   ) : (
-                    <span className="text-red-600">Mangler – klikk «Rediger»</span>
+                    <span className="text-danger">Mangler – klikk «Rediger»</span>
                   )}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-wood-700">Nettside</p>
-                <p className="truncate text-ink">
+                <p className="text-xs text-muted">Nettside</p>
+                <p className="truncate text-fg">
                   {lead.website ? (
                     <a
                       href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`}
@@ -266,26 +266,26 @@ export function LeadDetail({
                 </p>
               </div>
               <div>
-                <p className="text-xs text-wood-700">Bransje</p>
-                <p className="text-ink">{lead.industry ?? "–"}</p>
+                <p className="text-xs text-muted">Bransje</p>
+                <p className="text-fg">{lead.industry ?? "–"}</p>
               </div>
               <div>
-                <p className="text-xs text-wood-700">Tittel</p>
-                <p className="text-ink">{lead.job_title ?? "–"}</p>
+                <p className="text-xs text-muted">Tittel</p>
+                <p className="text-fg">{lead.job_title ?? "–"}</p>
               </div>
               <div>
-                <p className="text-xs text-wood-700">Kilde</p>
-                <p className="text-ink">{lead.source}</p>
+                <p className="text-xs text-muted">Kilde</p>
+                <p className="text-fg">{lead.source}</p>
               </div>
               <div>
-                <p className="text-xs text-wood-700">Org.nr</p>
-                <p className="text-ink">
+                <p className="text-xs text-muted">Org.nr</p>
+                <p className="text-fg">
                   {lead.org_number ? (
                     <a
                       href={`https://virksomhet.brreg.no/nb/oppslag/enheter/${lead.org_number}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-mono hover:underline"
+                      className="hover:underline"
                     >
                       {lead.org_number}
                     </a>
@@ -295,8 +295,8 @@ export function LeadDetail({
                 </p>
               </div>
               <div>
-                <p className="text-xs text-wood-700">Tildelt dato</p>
-                <p className="text-ink">{lead.assigned_date ?? "–"}</p>
+                <p className="text-xs text-muted">Tildelt dato</p>
+                <p className="text-fg">{lead.assigned_date ?? "–"}</p>
               </div>
             </CardContent>
           )}
@@ -307,7 +307,7 @@ export function LeadDetail({
             <CardTitle>Hva er sagt / aktivitet</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2 rounded-sm border-2 border-ink bg-wood-100 p-3">
+            <div className="flex flex-col gap-2 rounded-md border border-line bg-surface-2 p-3">
               <div className="flex gap-2">
                 <Select
                   value={activityType}
@@ -343,17 +343,17 @@ export function LeadDetail({
 
             <div className="flex flex-col gap-3">
               {activities.length === 0 && (
-                <p className="text-sm text-wood-700">Ingen aktivitet registrert ennå.</p>
+                <p className="text-sm text-muted">Ingen aktivitet registrert ennå.</p>
               )}
               {activities.map((activity) => (
-                <div key={activity.id} className="border-b border-ink/15 pb-3 last:border-0">
+                <div key={activity.id} className="border-b border-line pb-3 last:border-0">
                   <div className="flex items-center justify-between">
                     <Badge variant="default">{ACTIVITY_TYPE_LABELS[activity.type]}</Badge>
-                    <span className="text-xs text-wood-600">
+                    <span className="text-xs text-subtle">
                       {formatDateTime(activity.created_at)}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-wood-800">{activity.content}</p>
+                  <p className="mt-1 text-sm text-fg-2">{activity.content}</p>
                 </div>
               ))}
             </div>

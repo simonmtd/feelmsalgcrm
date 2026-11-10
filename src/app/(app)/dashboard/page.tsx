@@ -14,16 +14,17 @@ import { DonutChart } from "@/components/charts/donut-chart";
 import { PixelProgress } from "@/components/charts/pixel-progress";
 import { computeLeadStats, isContacted, weekPoints, monthPoints, yearPoints } from "@/lib/dashboard-stats";
 import { formatCurrency } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import { LEAD_STATUS_LABELS } from "@/lib/types";
 import type { Lead, LeadStatus, Profile } from "@/lib/types";
 
 const STATUS_COLORS: Record<LeadStatus, string> = {
-  new: "#9ED9F0",
-  assigned: "#58B6DD",
-  contacted: "#FFD24A",
-  follow_up: "#E8B23A",
-  won: "#3E8E38",
-  lost: "#B4442F",
+  new: "var(--color-info)",
+  assigned: "var(--color-violet)",
+  contacted: "var(--color-warning)",
+  follow_up: "#d9873a",
+  won: "var(--color-success)",
+  lost: "var(--color-danger)",
 };
 
 export default async function DashboardPage() {
@@ -151,52 +152,34 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <div className="flex justify-end">
-        <KeepAwake />
-      </div>
-
-      <div className="rounded-sm border-2 border-ink bg-wood-900 p-3 shadow-[4px_4px_0_0_var(--color-ink)]">
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <p className="font-pixel text-[10px] uppercase leading-relaxed tracking-wide text-gold-100">
-            {isAdmin ? "Porteføljen" : "Pipelinen din"} · {contactedCount}/{progressPool.length} leads
-            kontaktet
-          </p>
-          <p className="font-mono text-[11px] text-wood-200">
-            {stats.openCount} åpne · {stats.winRate}% vinnrate
-          </p>
-        </div>
-        <PixelProgress percent={followUpPercent} className="mt-2" />
-      </div>
-
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-wood-800">
-          {isAdmin
-            ? `Hei ${profile.full_name ?? profile.email}, her er status for hele porteføljen.`
-            : `Hei ${profile.full_name ?? profile.email}, her er status for pipelinen din.`}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted">
+          Hei <span className="font-medium text-fg">{(profile.full_name ?? profile.email).split(" ")[0]}</span>
+          {isAdmin ? " – her er status for hele porteføljen." : " – her er status for pipelinen din."}
         </p>
-        {isAdmin ? (
-          <div className="flex items-center gap-3">
-            <Link
-              href="/admin/leads?period=today"
-              className="inline-flex items-center gap-2 rounded-sm border-2 border-ink bg-gold-400 px-3 py-1.5 font-pixel text-[10px] uppercase tracking-wide text-ink shadow-[2px_2px_0_0_var(--color-ink)] transition-colors hover:bg-gold-300"
-            >
-              Nye i dag: {newTodayCount} <ArrowUpRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/admin/leads"
-              className="inline-flex items-center gap-1.5 font-pixel text-[10px] uppercase tracking-wide text-forest-700 hover:text-forest-500"
-            >
-              Se alle leads <ArrowUpRight className="h-4 w-4" />
-            </Link>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-wood-800">Niche:</span>
-            <div className="w-48">
-              <NicheSwitcher niches={niches ?? []} activeNicheId={profile.active_niche_id} />
+        <div className="flex flex-wrap items-center gap-2">
+          {isAdmin ? (
+            <>
+              <Link href="/admin/leads?period=today" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                Nye i dag
+                <span className="rounded-full bg-brand px-1.5 text-[11px] font-bold leading-[18px] text-brand-fg">
+                  {newTodayCount}
+                </span>
+              </Link>
+              <Link href="/admin/leads" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                Alle leads <ArrowUpRight />
+              </Link>
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted">Niche</span>
+              <div className="w-48">
+                <NicheSwitcher niches={niches ?? []} activeNicheId={profile.active_niche_id} />
+              </div>
             </div>
-          </div>
-        )}
+          )}
+          <KeepAwake />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -273,6 +256,22 @@ export default async function DashboardPage() {
         />
       </div>
 
+      <Card>
+        <CardContent className="flex flex-col gap-3 pt-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <p className="text-sm text-muted">
+              <span className="font-medium text-fg">{isAdmin ? "Porteføljen" : "Pipelinen din"}</span> ·{" "}
+              {contactedCount} av {progressPool.length} leads kontaktet
+            </p>
+            <p className="text-sm text-muted">
+              <span className="text-fg">{stats.openCount}</span> åpne ·{" "}
+              <span className="text-fg">{stats.winRate}%</span> vinnrate
+            </p>
+          </div>
+          <PixelProgress percent={followUpPercent} />
+        </CardContent>
+      </Card>
+
       <Leaderboard rows={leaderboard} />
 
       <TeamActivityStats sellers={statsSellers} callLogs={callLogs} meetings={meetingRows} />
@@ -296,7 +295,7 @@ export default async function DashboardPage() {
             {statusSegments.length ? (
               <DonutChart segments={statusSegments} centerIcon={Filter} />
             ) : (
-              <p className="py-10 text-center text-sm text-wood-700">Ingen leads ennå.</p>
+              <p className="py-10 text-center text-sm text-muted">Ingen leads ennå.</p>
             )}
           </CardContent>
         </Card>
@@ -308,7 +307,7 @@ export default async function DashboardPage() {
         </CardHeader>
         <CardContent>
           {!recentLeads.length ? (
-            <p className="py-6 text-center text-sm text-wood-700">
+            <p className="py-6 text-center text-sm text-muted">
               {isAdmin
                 ? "Ingen leads i systemet ennå."
                 : "Ingen nye leads tildelt i dag ennå. Nye leads fordeles automatisk hver morgen basert på din valgte niche."}

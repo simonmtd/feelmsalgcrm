@@ -4,16 +4,17 @@ import { cn } from "@/lib/utils";
 
 // inline-block (not inline-flex) so `max-w-*` + `truncate` actually clip long labels
 const badgeVariants = cva(
-  "inline-block whitespace-nowrap align-middle rounded-sm border border-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase leading-4 tracking-wide shadow-[1px_1px_0_0_var(--color-ink)]",
+  "inline-block whitespace-nowrap rounded-full px-2 py-0.5 align-middle text-xs font-medium leading-5",
   {
     variants: {
       variant: {
-        default: "bg-wood-200 text-wood-900",
-        blue: "bg-himmel-300 text-ink",
-        amber: "bg-gold-400 text-ink",
-        green: "bg-forest-400 text-ink",
-        red: "bg-red-400 text-ink",
-        purple: "bg-purple-300 text-ink",
+        default: "bg-surface-3 text-fg-2",
+        brand: "bg-brand-soft text-brand",
+        blue: "bg-info-soft text-info",
+        amber: "bg-warning-soft text-warning",
+        green: "bg-success-soft text-success",
+        red: "bg-danger-soft text-danger",
+        purple: "bg-violet-soft text-violet",
       },
     },
     defaultVariants: { variant: "default" },

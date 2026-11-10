@@ -2,70 +2,36 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { navSections, isActive } from "@/components/nav-links";
 import { cn } from "@/lib/utils";
 import type { Profile } from "@/lib/types";
 
-interface Shortcut {
-  href: string;
-  tag: string;
-  tagClass: string;
-  label: string;
-}
-
-const sellerShortcuts: Shortcut[] = [
-  { href: "/today", tag: "DAG", tagClass: "bg-gold-500 text-ink", label: "Dagens leads" },
-  { href: "/leads", tag: "MIN", tagClass: "bg-forest-500 text-white", label: "Mine leads" },
-  { href: "/meetings", tag: "MØT", tagClass: "bg-purple-400 text-ink", label: "Mine møter" },
-  { href: "/provisjon", tag: "KR", tagClass: "bg-gold-300 text-ink", label: "Provisjon" },
-  { href: "/calendar", tag: "KAL", tagClass: "bg-himmel-500 text-ink", label: "Kalender" },
-  { href: "/dashboard", tag: "DSH", tagClass: "bg-wood-200 text-wood-900", label: "Dashboard" },
-];
-
-const adminShortcuts: Shortcut[] = [
-  { href: "/dashboard", tag: "DAG", tagClass: "bg-gold-500 text-ink", label: "Dashboard" },
-  { href: "/leads", tag: "MIN", tagClass: "bg-gold-300 text-ink", label: "Mine leads" },
-  { href: "/admin/leads", tag: "ALL", tagClass: "bg-forest-500 text-white", label: "Alle leads" },
-  { href: "/meetings", tag: "MØT", tagClass: "bg-wood-200 text-wood-900", label: "Møter" },
-  { href: "/calendar", tag: "KAL", tagClass: "bg-himmel-500 text-ink", label: "Kalender" },
-  { href: "/admin/provisjon", tag: "KR", tagClass: "bg-gold-300 text-ink", label: "Provisjon" },
-  { href: "/admin/sync", tag: "SYN", tagClass: "bg-purple-400 text-ink", label: "Sync" },
-  { href: "/admin/settings", tag: "INN", tagClass: "bg-red-400 text-ink", label: "Innstillinger" },
-];
-
-/** Fixed quick-access strip, styled like the toolbar at the bottom of the pixel-art reference. */
+/** Mobile tab bar (below lg): the same links as the sidebar, icon + short label, scrollable. */
 export function BottomBar({ profile }: { profile: Profile }) {
   const pathname = usePathname();
-  const shortcuts = profile.role === "admin" ? adminShortcuts : sellerShortcuts;
+  const links = navSections(profile).flatMap((s) => s.links);
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t-2 border-ink bg-wood-900/95 px-3 py-2 backdrop-blur-sm">
-      <div className="flex items-center gap-2 overflow-x-auto">
-        {shortcuts.map((s) => {
-          const active = pathname === s.href || pathname.startsWith(s.href + "/");
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
+      <div className="flex gap-1 overflow-x-auto px-2 py-1.5">
+        {links.map((link) => {
+          const active = isActive(pathname, link.href);
+          const Icon = link.icon;
           return (
             <Link
-              key={s.href}
-              href={s.href}
+              key={link.href}
+              href={link.href}
               className={cn(
-                "flex shrink-0 items-center gap-2 rounded-sm border-2 border-ink bg-wood-800 px-2 py-1.5 transition-colors hover:bg-wood-700",
-                active && "bg-wood-700 ring-1 ring-gold-500"
+                "flex min-w-[68px] shrink-0 flex-col items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] text-subtle transition-colors",
+                active ? "bg-surface-2 text-fg" : "hover:text-fg"
               )}
             >
-              <span
-                className={cn(
-                  "rounded-[2px] border border-ink px-1 py-0.5 font-pixel text-[10px]",
-                  s.tagClass
-                )}
-              >
-                {s.tag}
-              </span>
-              <span className="font-pixel text-[10px] uppercase tracking-wide text-wood-100">
-                {s.label}
-              </span>
+              <Icon className={cn("h-[18px] w-[18px]", active && "text-brand")} />
+              <span className="whitespace-nowrap">{link.label}</span>
             </Link>
           );
         })}
       </div>
-    </div>
+    </nav>
   );
 }

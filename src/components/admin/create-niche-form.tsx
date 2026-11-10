@@ -20,8 +20,8 @@ export function CreateNicheForm() {
       <Button type="submit" disabled={pending}>
         {pending ? "Oppretter…" : "Opprett niche"}
       </Button>
-      {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
-      {state?.success && <p className="text-sm text-green-600">{state.success}</p>}
+      {state?.error && <p className="text-sm text-danger">{state.error}</p>}
+      {state?.success && <p className="text-sm text-success">{state.success}</p>}
     </form>
   );
 }

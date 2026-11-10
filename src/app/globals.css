@@ -1,45 +1,103 @@
 @import "tailwindcss";
 
-:root {
-  --background: #dff0f9;
-  --foreground: #241812;
+/*
+ * Feelm Leads — dark, grainy, Feelm-pink.
+ * Surfaces step up in lightness (bg → surface → surface-2 → surface-3) instead
+ * of using heavy borders/shadows; colour is reserved for meaning (brand action,
+ * status). Anton carries the loud moments (page titles, big numbers), Schibsted
+ * Grotesk everything you actually read.
+ */
+@theme inline {
+  --font-sans: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-anton), "Arial Narrow", sans-serif;
+  --font-brush: var(--font-lacquer), var(--font-anton), sans-serif;
+
+  --color-bg: #0b0a0a;
+  --color-surface: #131212;
+  --color-surface-2: #1a1919;
+  --color-surface-3: #242222;
+  --color-line: #262424;
+  --color-line-strong: #3a3737;
+
+  --color-fg: #f4efe7;
+  --color-fg-2: #d4cec6;
+  --color-muted: #9b958e;
+  --color-subtle: #6b6661;
+
+  --color-brand: #ff68b3;
+  --color-brand-hover: #ff86c3;
+  --color-brand-soft: rgb(255 104 179 / 0.13);
+  --color-brand-fg: #1c0912;
+
+  --color-success: #4fd18b;
+  --color-success-soft: rgb(79 209 139 / 0.13);
+  --color-warning: #f2b544;
+  --color-warning-soft: rgb(242 181 68 / 0.14);
+  --color-danger: #ff6b6b;
+  --color-danger-soft: rgb(255 107 107 / 0.13);
+  --color-info: #6cb4ff;
+  --color-info-soft: rgb(108 180 255 / 0.13);
+  --color-violet: #b69cff;
+  --color-violet-soft: rgb(182 156 255 / 0.14);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  /* All existing `font-serif` headings render in the pixel font — titles only, never body text */
-  --font-serif: var(--font-press-start);
-  --font-pixel: var(--font-press-start);
-
-  /* Pixel/game palette (see reference: wood, forest, sky, gold, dark ink outlines) */
-  --color-ink: #1e1610;
-  --color-wood-900: #2a1d12;
-  --color-wood-800: #3e2a16;
-  --color-wood-700: #5c3d1f;
-  --color-wood-600: #7a5228;
-  --color-wood-500: #96693a;
-  --color-wood-200: #d9c39a;
-  --color-wood-100: #f0e3c8;
-  --color-parchment: #fbf3de;
-  --color-forest-700: #245722;
-  --color-forest-600: #2f6b2b;
-  --color-forest-500: #3e8e38;
-  --color-forest-400: #5db253;
-  --color-forest-100: #d9edd4;
-  --color-gold-600: #c6912b;
-  --color-gold-500: #e8b23a;
-  --color-gold-400: #ffd24a;
-  --color-gold-100: #fdeec2;
-  --color-himmel-500: #58b6dd;
-  --color-himmel-300: #9ed9f0;
-  --color-himmel-100: #dff0f9;
+:root {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+}
+
+/* Film grain over everything (Feelm look). Fixed so it doesn't scroll, and
+   pointer-events none so it never blocks a click. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+::selection {
+  background: var(--color-brand);
+  color: var(--color-brand-fg);
+}
+
+@layer components {
+  /* Small uppercase section label ("eyebrow"). */
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  /* Loud Anton headline with Feelm's tight tracking. */
+  .display {
+    font-family: var(--font-display);
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+    line-height: 0.95;
+  }
+
+  /* Native form controls in the dark theme. */
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.8);
+  }
+}
+
+/* Thin, quiet scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
 }

@@ -112,6 +112,7 @@ export class MockQueryBuilder implements PromiseLike<{ data: unknown; error: nul
   private orderCol?: string;
   private orderAsc = true;
   private limitN?: number;
+  private rangeFrom = 0;
   private wantSingle: "single" | "maybeSingle" | null = null;
   private mutation: Mutation | null = null;
 
@@ -136,6 +137,22 @@ export class MockQueryBuilder implements PromiseLike<{ data: unknown; error: nul
 
   in(col: string, vals: unknown[]) {
     this.filters.push((r) => vals.includes(r[col]));
+    return this;
+  }
+
+  /** Case-insensitive LIKE with % wildcards. */
+  ilike(col: string, pattern: string) {
+    const re = new RegExp(
+      "^" + pattern.split("%").map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".*") + "$",
+      "i"
+    );
+    this.filters.push((r) => typeof r[col] === "string" && re.test(r[col] as string));
+    return this;
+  }
+
+  /** PostgREST `or` filters aren't emulated in demo mode; the query just isn't narrowed. */
+  or(_filters: string) {
+    void _filters;
     return this;
   }
 
@@ -165,6 +182,12 @@ export class MockQueryBuilder implements PromiseLike<{ data: unknown; error: nul
   order(col: string, opts?: { ascending?: boolean }) {
     this.orderCol = col;
     this.orderAsc = opts?.ascending ?? true;
+    return this;
+  }
+
+  range(from: number, to: number) {
+    this.rangeFrom = from;
+    this.limitN = to - from + 1;
     return this;
   }
 
@@ -290,7 +313,7 @@ export class MockQueryBuilder implements PromiseLike<{ data: unknown; error: nul
       });
     }
     const count = rows.length;
-    if (this.limitN != null) rows = rows.slice(0, this.limitN);
+    if (this.limitN != null) rows = rows.slice(this.rangeFrom, this.rangeFrom + this.limitN);
 
     if (this.headOnly) {
       return { data: null, error: null, count: this.countExact ? count : null };

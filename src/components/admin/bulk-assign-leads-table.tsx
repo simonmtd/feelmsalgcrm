@@ -34,14 +34,14 @@ function Checkbox({
       aria-label={label}
       onClick={onChange}
       className={cn(
-        "flex h-5 w-5 shrink-0 items-center justify-center rounded-[2px] border-2 border-ink transition-colors",
-        checked || indeterminate ? "bg-gold-500" : "bg-white hover:bg-gold-100"
+        "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-line transition-colors",
+        checked || indeterminate ? "bg-brand" : "bg-surface-2 hover:bg-surface-3"
       )}
     >
       {indeterminate ? (
-        <span className="h-0.5 w-2.5 bg-ink" />
+        <span className="h-0.5 w-2.5 bg-fg" />
       ) : checked ? (
-        <span className="font-pixel text-[10px] leading-none text-ink">x</span>
+        <span className="eyebrow leading-none text-fg">x</span>
       ) : null}
     </button>
   );
@@ -174,45 +174,45 @@ export function BulkAssignLeadsTable({
               : `${leads.length} leads`}
           </CardTitle>
           {selectedIds.size > 0 && (
-            <span className="font-pixel text-[10px] uppercase tracking-wide text-forest-700">
+            <span className="eyebrow uppercase tracking-wide text-success">
               {selectedIds.size} valgt
             </span>
           )}
         </div>
 
         {selectedIds.size > 0 && (
-          <div className="flex flex-col gap-3 rounded-sm border-2 border-ink bg-gold-100 p-3">
+          <div className="flex flex-col gap-3 rounded-md border border-line bg-brand-soft p-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs uppercase tracking-wide text-wood-600">Belastning nå:</span>
+            <span className="text-xs uppercase tracking-wide text-subtle">Belastning nå:</span>
             {sellers.map((seller) => (
               <span
                 key={seller.id}
-                className="rounded-[2px] border border-ink bg-parchment px-1.5 py-0.5 text-xs text-wood-900"
+                className="rounded-md border border-line bg-surface px-1.5 py-0.5 text-xs text-fg"
               >
                 {(seller.full_name ?? seller.email).split(" ")[0]}:{" "}
-                <span className="font-mono font-bold">{workload[seller.id] ?? 0}</span>
+                <span className="font-bold">{workload[seller.id] ?? 0}</span>
               </span>
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs uppercase tracking-wide text-wood-600">Fordel jevnt til:</span>
+            <span className="text-xs uppercase tracking-wide text-subtle">Fordel jevnt til:</span>
             {sellers.map((seller) => (
               <label
                 key={seller.id}
-                className="flex cursor-pointer items-center gap-1.5 rounded-[2px] border-2 border-ink bg-parchment px-2 py-0.5 text-xs text-wood-900"
+                className="flex cursor-pointer items-center gap-1.5 rounded-md border border-line bg-surface px-2 py-0.5 text-xs text-fg"
               >
                 <input
                   type="checkbox"
                   checked={distributeTo.has(seller.id)}
                   onChange={() => toggleRecipient(seller.id)}
-                  className="h-3.5 w-3.5 accent-gold-500"
+                  className="h-3.5 w-3.5 accent-brand"
                 />
                 {(seller.full_name ?? seller.email).split(" ")[0]}
               </label>
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm text-wood-800">Fordel {selectedIds.size} valgte til:</span>
+            <span className="text-sm text-fg-2">Fordel {selectedIds.size} valgte til:</span>
             <Select
               aria-label="Velg selger for de valgte leadsene"
               value={sellerId}
@@ -268,7 +268,7 @@ export function BulkAssignLeadsTable({
         )}
 
         {message && (
-          <p className="rounded-sm border-2 border-ink bg-forest-100 px-3 py-2 text-sm text-forest-700">
+          <p className="rounded-md border border-line bg-success-soft px-3 py-2 text-sm text-success">
             {message}
           </p>
         )}
@@ -277,7 +277,7 @@ export function BulkAssignLeadsTable({
       <CardContent className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-ink/25 text-left text-xs uppercase text-wood-700">
+            <tr className="border-b border-line text-left text-[11px] font-medium uppercase tracking-wider text-subtle">
               <th className="w-8 py-2 pr-3">
                 <Checkbox
                   checked={allSelected}
@@ -300,7 +300,7 @@ export function BulkAssignLeadsTable({
               return (
                 <tr
                   key={lead.id}
-                  className={cn("border-b border-ink/15", checked && "bg-gold-100")}
+                  className={cn("border-b border-line", checked && "bg-brand-soft")}
                 >
                   <td className="py-2 pr-3">
                     <Checkbox
@@ -312,11 +312,11 @@ export function BulkAssignLeadsTable({
                   <td className="py-2 pr-4">
                     <a
                       href={`/leads/${lead.id}`}
-                      className="font-medium text-ink hover:underline"
+                      className="font-medium text-fg hover:underline"
                     >
                       {lead.company_name ?? "Ukjent firma"}
                     </a>
-                    <p className="text-xs text-wood-700">{lead.contact_name}</p>
+                    <p className="text-xs text-muted">{lead.contact_name}</p>
                   </td>
                   <td className="py-2 pr-4">
                     <Badge variant={LEAD_STATUS_VARIANT[lead.status]}>
@@ -338,14 +338,14 @@ export function BulkAssignLeadsTable({
                       sellers={sellers}
                     />
                   </td>
-                  <td className="py-2 pr-4 text-wood-700">{formatDate(lead.created_at)}</td>
+                  <td className="py-2 pr-4 text-muted">{formatDate(lead.created_at)}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
         {!leads.length && (
-          <p className="py-6 text-center text-sm text-wood-700">
+          <p className="py-6 text-center text-sm text-muted">
             Ingen leads matcher filteret.
           </p>
         )}

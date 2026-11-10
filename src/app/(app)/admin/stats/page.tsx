@@ -65,7 +65,7 @@ export default async function AdminStatsPage() {
       <CardContent className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-ink/25 text-left text-xs uppercase text-wood-700">
+            <tr className="border-b border-line text-left text-[11px] font-medium uppercase tracking-wider text-subtle">
               <th className="py-2 pr-4">Selger</th>
               <th className="py-2 pr-4 text-right">Tildelt</th>
               <th className="py-2 pr-4 text-right">Åpne</th>
@@ -77,35 +77,35 @@ export default async function AdminStatsPage() {
           </thead>
           <tbody>
             {stats.map((s) => (
-              <tr key={s.id} className="border-b border-ink/15">
-                <td className="py-2 pr-4 font-medium text-ink">{s.name}</td>
-                <td className="py-2 pr-4 text-right font-mono">{s.assigned}</td>
-                <td className="py-2 pr-4 text-right font-mono">{s.open}</td>
-                <td className="py-2 pr-4 text-right font-mono text-forest-700">{s.won}</td>
-                <td className="py-2 pr-4 text-right font-mono text-red-600">{s.lost}</td>
-                <td className="py-2 pr-4 text-right font-mono">{s.winRate}%</td>
-                <td className="py-2 pr-4 text-right font-mono font-bold">
+              <tr key={s.id} className="border-b border-line">
+                <td className="py-2 pr-4 font-medium text-fg">{s.name}</td>
+                <td className="py-2 pr-4 text-right">{s.assigned}</td>
+                <td className="py-2 pr-4 text-right">{s.open}</td>
+                <td className="py-2 pr-4 text-right text-success">{s.won}</td>
+                <td className="py-2 pr-4 text-right text-danger">{s.lost}</td>
+                <td className="py-2 pr-4 text-right">{s.winRate}%</td>
+                <td className="py-2 pr-4 text-right font-bold">
                   {formatCurrency(s.wonValue)}
                 </td>
               </tr>
             ))}
           </tbody>
           <tfoot>
-            <tr className="border-t-2 border-ink text-sm font-semibold">
-              <td className="py-2 pr-4 uppercase text-wood-700">Totalt</td>
-              <td className="py-2 pr-4 text-right font-mono">{totals.assigned}</td>
-              <td className="py-2 pr-4 text-right font-mono">{totals.open}</td>
-              <td className="py-2 pr-4 text-right font-mono text-forest-700">{totals.won}</td>
+            <tr className="border-t border-line text-sm font-semibold">
+              <td className="py-2 pr-4 uppercase text-muted">Totalt</td>
+              <td className="py-2 pr-4 text-right">{totals.assigned}</td>
+              <td className="py-2 pr-4 text-right">{totals.open}</td>
+              <td className="py-2 pr-4 text-right text-success">{totals.won}</td>
               <td className="py-2 pr-4" />
               <td className="py-2 pr-4" />
-              <td className="py-2 pr-4 text-right font-mono font-bold">
+              <td className="py-2 pr-4 text-right font-bold">
                 {formatCurrency(totals.wonValue)}
               </td>
             </tr>
           </tfoot>
         </table>
         {!sellers.length && (
-          <p className="py-6 text-center text-sm text-wood-700">Ingen selgere ennå.</p>
+          <p className="py-6 text-center text-sm text-muted">Ingen selgere ennå.</p>
         )}
       </CardContent>
     </Card>

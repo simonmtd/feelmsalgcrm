@@ -3,20 +3,19 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm border-2 border-ink font-pixel text-[10px] uppercase tracking-wide transition-all shadow-[3px_3px_0_0_var(--color-ink)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0_0_var(--color-ink)] disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold transition-colors disabled:pointer-events-none disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-gold-500 text-ink hover:bg-gold-400",
-        outline: "bg-parchment text-ink hover:bg-wood-100",
-        ghost:
-          "border-transparent shadow-none bg-transparent text-wood-800 hover:bg-wood-100 active:translate-x-0 active:translate-y-0",
-        destructive: "bg-red-600 text-white hover:bg-red-500",
+        default: "bg-brand text-brand-fg hover:bg-brand-hover",
+        outline: "border border-line bg-surface-2 text-fg hover:border-line-strong hover:bg-surface-3",
+        ghost: "text-muted hover:bg-surface-2 hover:text-fg",
+        destructive: "bg-danger-soft text-danger hover:bg-danger/20",
       },
       size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 px-3",
-        lg: "h-10 px-6",
+        default: "h-9 px-4",
+        sm: "h-8 px-3 text-[13px]",
+        lg: "h-11 px-6",
       },
     },
     defaultVariants: {
@@ -40,3 +39,5 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   )
 );
 Button.displayName = "Button";
+
+export { buttonVariants };

@@ -18,6 +18,7 @@ import {
 import { LeadCombobox } from "@/components/meetings/lead-combobox";
 import { CommissionCell } from "@/components/commission/commission-cell";
 import { Textarea } from "@/components/ui/textarea";
+import { Stat } from "@/components/ui/stat";
 import { COMMISSION_PER_MEETING } from "@/lib/commission";
 import { formatCurrency, cn } from "@/lib/utils";
 import { MEETING_TYPE_LABELS, PRODUCT_TYPE_LABELS } from "@/lib/types";
@@ -59,37 +60,37 @@ function MeetingRow({
   const [amount, setAmount] = useState("");
 
   return (
-    <tr className="border-b border-ink/15 align-top">
+    <tr className="border-b border-line align-top">
       <td className="py-3 pr-4">
-        <p className="font-medium text-ink">{meeting.title}</p>
-        <p className="mt-0.5 font-mono text-xs text-wood-700">
+        <p className="font-medium text-fg">{meeting.title}</p>
+        <p className="mt-0.5 text-xs text-muted">
           {formatWhen(meeting.starts_at, meeting.ends_at)}
         </p>
         {meeting.location && (
-          <p className="mt-1 flex items-center gap-1 text-xs text-wood-600">
+          <p className="mt-1 flex items-center gap-1 text-xs text-subtle">
             <MapPin className="h-3 w-3" /> {meeting.location}
           </p>
         )}
         {meeting.notes && (
-          <p className="mt-1 max-w-xs whitespace-pre-line text-xs italic text-wood-700">{meeting.notes}</p>
+          <p className="mt-1 max-w-xs whitespace-pre-line text-xs italic text-muted">{meeting.notes}</p>
         )}
       </td>
       <td className="py-3 pr-4">
         {meeting.lead ? (
           <Link
             href={`/leads/${meeting.lead.id}`}
-            className="flex items-start gap-1.5 text-sm text-ink hover:underline"
+            className="flex items-start gap-1.5 text-sm text-fg hover:underline"
           >
-            <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-wood-600" />
+            <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-subtle" />
             <span>
               {meeting.lead.company_name ?? "Ukjent firma"}
               {meeting.lead.contact_name && (
-                <span className="block text-xs text-wood-700">{meeting.lead.contact_name}</span>
+                <span className="block text-xs text-muted">{meeting.lead.contact_name}</span>
               )}
             </span>
           </Link>
         ) : (
-          <span className="text-sm text-wood-600">–</span>
+          <span className="text-sm text-subtle">–</span>
         )}
       </td>
       <td className="py-3 pr-4">
@@ -99,12 +100,12 @@ function MeetingRow({
       </td>
       <td className="py-3 pr-4">
         {meeting.product_type ? (
-          <span className="text-sm text-ink">{PRODUCT_TYPE_LABELS[meeting.product_type]}</span>
+          <span className="text-sm text-fg">{PRODUCT_TYPE_LABELS[meeting.product_type]}</span>
         ) : (
-          <span className="text-sm text-wood-600">–</span>
+          <span className="text-sm text-subtle">–</span>
         )}
       </td>
-      <td className="py-3 pr-4 font-mono text-sm font-bold text-ink">
+      <td className="py-3 pr-4 text-sm font-bold text-fg">
         {formatCurrency(meeting.deal_size)}
       </td>
       <td className="py-3 pr-4">
@@ -119,7 +120,7 @@ function MeetingRow({
               })
             }
             title={canEdit ? "Klikk for å angre signert" : "Signert"}
-            className="inline-flex items-center gap-1 rounded-sm border-2 border-ink bg-forest-500 px-2 py-1 text-xs font-bold text-parchment shadow-[2px_2px_0_0_var(--color-ink)] disabled:opacity-70"
+            className="inline-flex items-center gap-1 rounded-md border border-line bg-success-soft px-2 py-1 text-xs font-bold text-fg disabled:opacity-70"
           >
             <CheckCircle2 className="h-3.5 w-3.5" /> Signert
           </button>
@@ -149,14 +150,14 @@ function MeetingRow({
                     onChanged();
                   })
                 }
-                className="rounded-sm border-2 border-ink bg-forest-500 px-2 py-1 text-xs font-bold text-parchment shadow-[2px_2px_0_0_var(--color-ink)] disabled:opacity-50"
+                className="rounded-md border border-line bg-success-soft px-2 py-1 text-xs font-bold text-fg disabled:opacity-50"
               >
                 Signer
               </button>
               <button
                 type="button"
                 onClick={() => setSigning(false)}
-                className="px-1 text-xs text-wood-600 hover:text-ink"
+                className="px-1 text-xs text-subtle hover:text-fg"
               >
                 Avbryt
               </button>
@@ -169,13 +170,13 @@ function MeetingRow({
                 setAmount(meeting.deal_size != null ? String(meeting.deal_size) : "");
                 setSigning(true);
               }}
-              className="inline-flex items-center gap-1 rounded-sm border-2 border-ink bg-wood-100 px-2 py-1 text-xs text-wood-800 transition-colors hover:bg-gold-300 disabled:opacity-50"
+              className="inline-flex items-center gap-1 rounded-md border border-line bg-surface-2 px-2 py-1 text-xs text-fg-2 transition-colors hover:bg-surface-3 disabled:opacity-50"
             >
               Marker signert
             </button>
           )
         ) : (
-          <span className="text-sm text-wood-600">–</span>
+          <span className="text-sm text-subtle">–</span>
         )}
       </td>
       <td className="py-3 pr-4">
@@ -193,7 +194,7 @@ function MeetingRow({
                 onChanged();
               })
             }
-            className="rounded-sm border-2 border-transparent p-1 text-wood-600 transition-colors hover:border-ink hover:bg-red-400 hover:text-ink disabled:opacity-50"
+            className="rounded-md border border-transparent p-1 text-subtle transition-colors hover:border-line hover:bg-danger-soft hover:text-fg disabled:opacity-50"
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -267,38 +268,18 @@ export function MeetingsView({
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardContent className="pt-5">
-            <p className="font-pixel text-[10px] uppercase leading-relaxed text-wood-800">
-              Kommende møter
-            </p>
-            <p className="mt-2 font-mono text-2xl font-bold text-ink">{upcoming.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-5">
-            <p className="font-pixel text-[10px] uppercase leading-relaxed text-wood-800">
-              Verdi i pipeline
-            </p>
-            <p className="mt-2 font-mono text-2xl font-bold text-ink">
-              {formatCurrency(pipelineValue)}
-            </p>
-            <p className="mt-1 text-xs text-wood-700">Sum deal size på kommende møter</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-5">
-            <p className="font-pixel text-[10px] uppercase leading-relaxed text-wood-800">
-              Registrert totalt
-            </p>
-            <p className="mt-2 font-mono text-2xl font-bold text-ink">
-              {formatCurrency(totalValue)}
-            </p>
-            <p className="mt-1 text-xs text-wood-700">
-              {filtered.length} {filtered.length === 1 ? "møte" : "møter"}
-            </p>
-          </CardContent>
-        </Card>
+        <Stat label="Kommende møter" value={upcoming.length} />
+        <Stat
+          label="Verdi i pipeline"
+          value={formatCurrency(pipelineValue)}
+          hint="Sum deal size på kommende møter"
+          accent
+        />
+        <Stat
+          label="Registrert totalt"
+          value={formatCurrency(totalValue)}
+          hint={`${filtered.length} ${filtered.length === 1 ? "møte" : "møter"}`}
+        />
       </div>
 
       {byProduct.length > 0 && (
@@ -310,10 +291,10 @@ export function MeetingsView({
             {byProduct.map(([product, { count, value }]) => (
               <span
                 key={product}
-                className="rounded-sm border-2 border-ink bg-wood-100 px-2.5 py-1.5 text-xs text-wood-900 shadow-[2px_2px_0_0_var(--color-ink)]"
+                className="rounded-md border border-line bg-surface-2 px-2.5 py-1.5 text-xs text-fg "
               >
                 <span className="font-semibold">{PRODUCT_TYPE_LABELS[product]}</span>
-                <span className="ml-2 font-mono">
+                <span className="ml-2">
                   {count} · {formatCurrency(value)}
                 </span>
               </span>
@@ -324,7 +305,7 @@ export function MeetingsView({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-wood-800">Produkt:</span>
+          <span className="text-sm text-fg-2">Produkt:</span>
           <Select
             aria-label="Filtrer på produkt"
             value={productFilter}
@@ -424,15 +405,15 @@ export function MeetingsView({
                   placeholder="Hvem møtte du, hva ble sagt, neste steg … (påkrevd for provisjon)"
                 />
               </div>
-              <label className="flex w-fit items-center gap-2 text-sm text-wood-800 sm:col-span-2 lg:col-span-4">
-                <input type="checkbox" name="commission_claimed" className="h-4 w-4 accent-gold-500" />
+              <label className="flex w-fit items-center gap-2 text-sm text-fg-2 sm:col-span-2 lg:col-span-4">
+                <input type="checkbox" name="commission_claimed" className="h-4 w-4 accent-brand" />
                 Provisjonsmøte – krev {formatCurrency(COMMISSION_PER_MEETING)} (godkjennes i ukesrapporten)
               </label>
 
               <div className="flex flex-wrap items-center gap-3 sm:col-span-2 lg:col-span-4">
                 <Button type="submit">Lagre møte</Button>
-                {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
-                {state?.success && <p className="text-sm text-forest-700">{state.success}</p>}
+                {state?.error && <p className="text-sm text-danger">{state.error}</p>}
+                {state?.success && <p className="text-sm text-success">{state.success}</p>}
               </div>
             </form>
           </CardContent>
@@ -447,7 +428,7 @@ export function MeetingsView({
           {upcoming.length ? (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-ink/25 text-left text-xs uppercase text-wood-700">
+                <tr className="border-b border-line text-left text-[11px] font-medium uppercase tracking-wider text-subtle">
                   <th className="py-2 pr-4">Møte</th>
                   <th className="py-2 pr-4">Kunde</th>
                   <th className="py-2 pr-4">Type</th>
@@ -470,7 +451,7 @@ export function MeetingsView({
               </tbody>
             </table>
           ) : (
-            <p className="py-6 text-center text-sm text-wood-700">
+            <p className="py-6 text-center text-sm text-muted">
               Ingen kommende møter registrert.
             </p>
           )}
@@ -485,7 +466,7 @@ export function MeetingsView({
           <CardContent className="overflow-x-auto">
             <table className={cn("w-full text-sm", "opacity-80")}>
               <thead>
-                <tr className="border-b border-ink/25 text-left text-xs uppercase text-wood-700">
+                <tr className="border-b border-line text-left text-[11px] font-medium uppercase tracking-wider text-subtle">
                   <th className="py-2 pr-4">Møte</th>
                   <th className="py-2 pr-4">Kunde</th>
                   <th className="py-2 pr-4">Type</th>

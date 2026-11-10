@@ -52,10 +52,10 @@ export function LogCallForm() {
           <Button type="submit" disabled={isPending}>
             {isPending ? "Lagrer…" : "Registrer samtale"}
           </Button>
-          {state.error && <p className="text-sm text-red-600">{state.error}</p>}
-          {state.success && <p className="text-sm text-forest-700">{state.success}</p>}
+          {state.error && <p className="text-sm text-danger">{state.error}</p>}
+          {state.success && <p className="text-sm text-success">{state.success}</p>}
         </form>
-        <p className="mt-2 text-xs text-wood-700">
+        <p className="mt-2 text-xs text-muted">
           Ringte du noen fra lista? Bruk «Ring &amp; registrer utfall» på selve leaden — de
           telles automatisk.
         </p>

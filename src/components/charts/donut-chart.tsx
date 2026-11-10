@@ -16,10 +16,10 @@ export function DonutChart({
 }) {
   const total = segments.reduce((sum, s) => sum + s.value, 0) || 1;
   const size = 176;
-  const stroke = 24;
+  const stroke = 14;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  const gap = segments.length > 1 ? 4 : 0;
+  const gap = segments.length > 1 ? 3 : 0;
 
   const arcs: { label: string; color: string; dash: number; offset: number }[] = [];
   let cumulative = 0;
@@ -39,7 +39,7 @@ export function DonutChart({
     <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-center">
       <div className="relative shrink-0" style={{ width: size, height: size }}>
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
-          <circle cx={size / 2} cy={size / 2} r={r} stroke="#D9C39A" strokeWidth={stroke} fill="none" />
+          <circle cx={size / 2} cy={size / 2} r={r} stroke="var(--color-surface-3)" strokeWidth={stroke} fill="none" />
           {arcs.map((arc) => (
             <circle
               key={arc.label}
@@ -50,6 +50,7 @@ export function DonutChart({
               strokeWidth={stroke}
               fill="none"
               strokeDasharray={`${arc.dash} ${c - arc.dash}`}
+              strokeLinecap="round"
               strokeDashoffset={arc.offset}
             />
           ))}
@@ -61,8 +62,11 @@ export function DonutChart({
               triggerLabel="Vis forklaring for statusfordelingen"
               align="left"
               trigger={
-                <span className="flex h-11 w-11 items-center justify-center rounded-sm border-2 border-ink bg-gold-500 text-ink shadow-[2px_2px_0_0_var(--color-ink)]">
-                  <CenterIcon className="h-5 w-5" />
+                <span className="flex flex-col items-center leading-none">
+                  <span className="display text-5xl text-fg">{total}</span>
+                  <span className="mt-1.5 flex items-center gap-1 text-xs text-muted">
+                    <CenterIcon className="h-3 w-3" /> leads
+                  </span>
                 </span>
               }
             >
@@ -74,7 +78,7 @@ export function DonutChart({
                 {segments.map((s) => (
                   <li key={s.label} className="flex justify-between gap-3">
                     <span>{s.label}</span>
-                    <span className="font-mono font-bold">{s.value}</span>
+                    <span className="font-bold">{s.value}</span>
                   </li>
                 ))}
               </ul>
@@ -85,14 +89,14 @@ export function DonutChart({
       <ul className="flex w-full flex-col gap-2 text-sm">
         {segments.map((s) => (
           <li key={s.label} className="flex items-center justify-between gap-4">
-            <span className="flex items-center gap-2 text-wood-800">
+            <span className="flex items-center gap-2 text-fg-2">
               <span
-                className="h-2.5 w-2.5 shrink-0 rounded-[1px] border border-ink"
+                className="h-2 w-2 shrink-0 rounded-full"
                 style={{ backgroundColor: s.color }}
               />
               {s.label}
             </span>
-            <span className="font-mono font-bold text-ink">
+            <span className="font-medium text-fg">
               {Math.round((s.value / total) * 100)}%
             </span>
           </li>

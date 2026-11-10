@@ -27,8 +27,8 @@ export function ChangePasswordForm() {
             <Label htmlFor="confirm">Gjenta nytt passord</Label>
             <Input id="confirm" name="confirm" type="password" autoComplete="new-password" required minLength={8} />
           </div>
-          {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
-          {state?.success && <p className="text-sm text-forest-700">{state.success}</p>}
+          {state?.error && <p className="text-sm text-danger">{state.error}</p>}
+          {state?.success && <p className="text-sm text-success">{state.success}</p>}
           <Button type="submit" disabled={pending} className="mt-1 self-start">
             {pending ? "Lagrer…" : "Lagre nytt passord"}
           </Button>

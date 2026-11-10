@@ -37,7 +37,7 @@ export function LoginForm() {
             />
           </div>
           {state?.error && (
-            <p className="text-sm text-red-600">{state.error}</p>
+            <p className="text-sm text-danger">{state.error}</p>
           )}
           <Button type="submit" disabled={pending} className="mt-2">
             {pending ? "Logger inn…" : "Logg inn"}

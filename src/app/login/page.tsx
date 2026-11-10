@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
-import { Clapperboard } from "lucide-react";
 import { LoginForm } from "@/components/login-form";
+import { Wordmark } from "@/components/sidebar";
 import { DEMO_MOCK, DEMO_PASSWORD } from "@/lib/demo/mode";
 import { getProfile } from "@/lib/dal";
 
@@ -15,35 +15,48 @@ export default async function LoginPage() {
     : [];
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-himmel-300 via-himmel-100 to-wood-100 px-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-sm border-2 border-ink bg-gold-500 text-ink shadow-[3px_3px_0_0_var(--color-ink)]">
-            <Clapperboard className="h-6 w-6" />
-          </div>
-          <h1 className="inline-block rounded-sm border-2 border-ink bg-gradient-to-b from-wood-600 to-wood-800 px-4 py-2.5 font-pixel text-sm uppercase tracking-wider text-gold-100 shadow-[3px_3px_0_0_var(--color-ink)]">
-            Feelm Leads
-          </h1>
-          <p className="mt-3 text-sm text-wood-800">
-            Logg inn for å se dine leads
+    <div className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
+      {/* Brand side: Feelm's loud type on a pink glow. */}
+      <div className="relative hidden overflow-hidden border-r border-line lg:flex lg:flex-col lg:justify-between lg:p-12">
+        <div className="pointer-events-none absolute -left-40 -top-40 h-[640px] w-[640px] rounded-full bg-brand/20 blur-[140px]" />
+        <Wordmark className="relative text-5xl" />
+        <div className="relative">
+          <p className="display text-[clamp(64px,8vw,128px)] text-fg">
+            Flere møter.
+            <br />
+            <span className="text-brand">Mindre styr.</span>
+          </p>
+          <p className="mt-6 max-w-md text-muted">
+            Dagens leads, samtaler, møter og provisjon – samlet på ett sted for Feelm-teamet.
           </p>
         </div>
-        <LoginForm />
-        {DEMO_MOCK && (
-          <div className="mt-6 rounded-sm border-2 border-ink bg-gold-100 p-4 text-xs text-wood-900 shadow-[3px_3px_0_0_var(--color-ink)]">
-            <p className="font-pixel text-[10px] uppercase tracking-wide">Demo-modus</p>
-            <p className="mt-1">
-              Passord for alle brukere: <span className="font-mono">{DEMO_PASSWORD}</span>
-            </p>
-            <ul className="mt-2 flex flex-col gap-0.5">
-              {demoProfiles.map((p) => (
-                <li key={p.id} className="font-mono">
-                  {p.email} <span className="font-sans text-wood-600">({p.role})</span>
-                </li>
-              ))}
-            </ul>
+        <p className="relative text-xs text-subtle">© Feelm</p>
+      </div>
+
+      <div className="flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-sm">
+          <div className="mb-8">
+            <Wordmark className="mb-6 block text-4xl lg:hidden" />
+            <h1 className="display text-5xl text-fg">Logg inn</h1>
+            <p className="mt-2 text-sm text-muted">Logg inn for å se dine leads.</p>
           </div>
-        )}
+          <LoginForm />
+          {DEMO_MOCK && (
+            <div className="mt-6 rounded-xl border border-line bg-surface p-4 text-xs text-fg-2">
+              <p className="eyebrow">Demo-modus</p>
+              <p className="mt-1">
+                Passord for alle brukere: <span className="font-mono text-fg">{DEMO_PASSWORD}</span>
+              </p>
+              <ul className="mt-2 flex flex-col gap-0.5">
+                {demoProfiles.map((p) => (
+                  <li key={p.id}>
+                    {p.email} <span className="text-subtle">({p.role})</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

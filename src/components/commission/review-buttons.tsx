@@ -19,7 +19,7 @@ export function ReviewButtons({ meetingId, status }: { meetingId: string; status
   }
 
   const base =
-    "inline-flex items-center gap-1 rounded-sm border-2 border-ink px-2.5 py-1 text-xs font-bold shadow-[2px_2px_0_0_var(--color-ink)] transition-colors disabled:opacity-50";
+    "inline-flex items-center gap-1 rounded-md border border-line px-2.5 py-1 text-xs font-bold transition-colors disabled:opacity-50";
   return (
     <div className="flex flex-col items-start gap-1">
       <div className="flex gap-2">
@@ -27,7 +27,7 @@ export function ReviewButtons({ meetingId, status }: { meetingId: string; status
           type="button"
           disabled={isPending}
           onClick={() => review(true)}
-          className={cn(base, status === "approved" ? "bg-forest-500 text-parchment" : "bg-wood-100 text-wood-900 hover:bg-forest-400")}
+          className={cn(base, status === "approved" ? "bg-success-soft text-fg" : "bg-surface-2 text-fg hover:bg-success-soft")}
         >
           <Check className="h-3.5 w-3.5" /> Ja
         </button>
@@ -35,12 +35,12 @@ export function ReviewButtons({ meetingId, status }: { meetingId: string; status
           type="button"
           disabled={isPending}
           onClick={() => review(false)}
-          className={cn(base, status === "rejected" ? "bg-red-400 text-ink" : "bg-wood-100 text-wood-900 hover:bg-red-400")}
+          className={cn(base, status === "rejected" ? "bg-danger-soft text-fg" : "bg-surface-2 text-fg hover:bg-danger-soft")}
         >
           <X className="h-3.5 w-3.5" /> Nei
         </button>
       </div>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
     </div>
   );
 }

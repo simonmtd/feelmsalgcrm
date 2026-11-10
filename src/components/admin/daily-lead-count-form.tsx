@@ -39,7 +39,7 @@ export function DailyLeadCountForm({ initialValue }: { initialValue: number }) {
         >
           Lagre
         </Button>
-        {saved && <span className="text-sm text-green-600">Lagret</span>}
+        {saved && <span className="text-sm text-success">Lagret</span>}
       </div>
     </div>
   );

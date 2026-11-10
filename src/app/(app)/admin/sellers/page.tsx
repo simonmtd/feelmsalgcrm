@@ -31,7 +31,7 @@ export default async function AdminSellersPage() {
         <CardContent className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-ink/25 text-left text-xs uppercase text-wood-700">
+              <tr className="border-b border-line text-left text-[11px] font-medium uppercase tracking-wider text-subtle">
                 <th className="py-2 pr-4">Navn</th>
                 <th className="py-2 pr-4">E-post</th>
                 <th className="py-2 pr-4">Rolle</th>
@@ -42,7 +42,7 @@ export default async function AdminSellersPage() {
             </thead>
             <tbody>
               {(sellers as Profile[] | null)?.map((seller) => (
-                <tr key={seller.id} className="border-b border-ink/15">
+                <tr key={seller.id} className="border-b border-line">
                   <td className="py-2 pr-4">{seller.full_name ?? "–"}</td>
                   <td className="py-2 pr-4">{seller.email}</td>
                   <td className="py-2 pr-4 capitalize">{seller.role}</td>

@@ -42,23 +42,23 @@ export default async function AdminNichesPage() {
           {(niches as Niche[] | null)?.map((niche) => (
             <div
               key={niche.id}
-              className="flex items-center justify-between border-b border-ink/15 py-2 text-sm last:border-0"
+              className="flex items-center justify-between border-b border-line py-2 text-sm last:border-0"
             >
-              <span className="font-medium text-ink">{niche.name}</span>
-              <span className="text-wood-700">
+              <span className="font-medium text-fg">{niche.name}</span>
+              <span className="text-muted">
                 {countsByNiche[niche.id] ?? 0} leads
               </span>
             </div>
           ))}
           {!niches?.length && (
-            <p className="text-sm text-wood-700">Ingen nicher opprettet ennå.</p>
+            <p className="text-sm text-muted">Ingen nicher opprettet ennå.</p>
           )}
         </CardContent>
       </Card>
 
       {(unclassifiedCount ?? 0) > 0 && (
         <Card>
-          <CardContent className="pt-5 text-sm text-wood-800">
+          <CardContent className="pt-5 text-sm text-fg-2">
             {unclassifiedCount} leads mangler niche.{" "}
             <a href="/admin/leads?niche=unclassified" className="font-medium underline">
               Klassifiser dem her

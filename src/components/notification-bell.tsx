@@ -7,11 +7,11 @@ export function NotificationBell({ unread }: { unread: number }) {
     <Link
       href="/notifications"
       title={unread > 0 ? `${unread} uleste varsler` : "Varsler"}
-      className="relative flex h-11 w-11 items-center justify-center rounded-sm border-2 border-ink bg-parchment text-wood-800 shadow-[3px_3px_0_0_var(--color-ink)] transition-colors hover:bg-gold-100"
+      className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-surface text-muted transition-colors hover:border-line-strong hover:text-fg"
     >
-      <Bell className="h-5 w-5" />
+      <Bell className="h-4 w-4" />
       {unread > 0 && (
-        <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-ink bg-red-400 px-1 font-mono text-[10px] font-bold text-ink">
+        <span className="absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-brand-fg ring-2 ring-bg">
           {unread > 9 ? "9+" : unread}
         </span>
       )}

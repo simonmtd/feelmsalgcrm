@@ -19,12 +19,14 @@ export default async function AppLayout({
     .is("read_at", null);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-himmel-300 via-himmel-100 to-wood-100 p-3 pb-24 sm:p-4 sm:pb-24">
-      <div className="flex items-start gap-4">
-        <Sidebar profile={profile} />
-        <div className="flex min-w-0 flex-1 flex-col gap-6 py-1">
+    <div className="flex min-h-screen">
+      <Sidebar profile={profile} />
+      <div className="relative min-w-0 flex-1">
+        {/* A faint pink glow at the top, Feelm's colour without shouting. */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(60%_100%_at_20%_0%,rgb(255_104_179/0.09),transparent)]" />
+        <div className="relative mx-auto flex w-full max-w-[1440px] flex-col gap-8 px-4 pb-28 pt-6 sm:px-8 lg:pb-12 lg:pt-10">
           <PageHeader profile={profile} unread={unread ?? 0} />
-          <main className="flex flex-col gap-6 pb-8">{children}</main>
+          <main className="flex flex-col gap-6">{children}</main>
         </div>
       </div>
       <BottomBar profile={profile} />

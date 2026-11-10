@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Press_Start_2P } from "next/font/google";
+import { Anton, Geist_Mono, Lacquer, Schibsted_Grotesk } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const sans = Schibsted_Grotesk({
+  variable: "--font-schibsted",
+  subsets: ["latin", "latin-ext"],
 });
 
 const geistMono = Geist_Mono({
@@ -12,11 +12,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const pixel = Press_Start_2P({
-  variable: "--font-press-start",
+const display = Anton({
+  variable: "--font-anton",
   subsets: ["latin", "latin-ext"],
   weight: "400",
-  fallback: ["ui-monospace", "Menlo", "Consolas", "monospace"],
+});
+
+const brush = Lacquer({
+  variable: "--font-lacquer",
+  subsets: ["latin"],
+  weight: "400",
 });
 
 export const metadata: Metadata = {
@@ -32,7 +37,7 @@ export default function RootLayout({
   return (
     <html
       lang="no"
-      className={`${geistSans.variable} ${geistMono.variable} ${pixel.variable} h-full antialiased`}
+      className={`${sans.variable} ${geistMono.variable} ${display.variable} ${brush.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

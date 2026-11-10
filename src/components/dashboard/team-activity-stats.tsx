@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Phone } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { segmented } from "@/components/ui/segmented";
 
 interface CallRow {
   seller_id: string;
@@ -100,18 +100,13 @@ export function TeamActivityStats({
           <CardTitle className="flex items-center gap-2">
             <Phone className="h-4 w-4" /> Aktivitet &amp; hit-rate
           </CardTitle>
-          <div className="flex gap-1.5">
+          <div className={segmented.root}>
             {PERIODS.map((p) => (
               <button
                 key={p.key}
                 type="button"
                 onClick={() => setPeriodKey(p.key)}
-                className={cn(
-                  "rounded-sm border-2 border-ink px-2.5 py-1 font-pixel text-[8px] uppercase tracking-wide shadow-[2px_2px_0_0_var(--color-ink)] transition-colors",
-                  periodKey === p.key
-                    ? "bg-gold-500 text-ink"
-                    : "bg-parchment text-wood-800 hover:bg-gold-100"
-                )}
+                className={segmented.item(periodKey === p.key)}
               >
                 {p.label}
               </button>
@@ -123,7 +118,7 @@ export function TeamActivityStats({
         {rows.length ? (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-ink/25 text-left text-xs uppercase text-wood-700">
+              <tr className="border-b border-line text-left text-[11px] font-medium uppercase tracking-wider text-subtle">
                 <th className="py-2 pr-4">Selger</th>
                 <th className="py-2 pr-4 text-right">Samtaler</th>
                 <th className="py-2 pr-4 text-right">Snitt/dag</th>
@@ -135,43 +130,43 @@ export function TeamActivityStats({
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id} className="border-b border-ink/10">
-                  <td className="py-2 pr-4 font-medium text-ink">{r.name}</td>
-                  <td className="py-2 pr-4 text-right font-mono">{r.calls}</td>
-                  <td className="py-2 pr-4 text-right font-mono text-wood-700">
+                <tr key={r.id} className="border-b border-line">
+                  <td className="py-2 pr-4 font-medium text-fg">{r.name}</td>
+                  <td className="py-2 pr-4 text-right">{r.calls}</td>
+                  <td className="py-2 pr-4 text-right text-muted">
                     {r.perDay.toFixed(1)}
                   </td>
-                  <td className="py-2 pr-4 text-right font-mono">{r.booked}</td>
-                  <td className="py-2 pr-4 text-right font-mono">{r.signed}</td>
-                  <td className="py-2 pr-4 text-right font-mono text-forest-700">{r.meetRate}%</td>
-                  <td className="py-2 text-right font-mono text-forest-700">{r.closeRate}%</td>
+                  <td className="py-2 pr-4 text-right">{r.booked}</td>
+                  <td className="py-2 pr-4 text-right">{r.signed}</td>
+                  <td className="py-2 pr-4 text-right text-success">{r.meetRate}%</td>
+                  <td className="py-2 text-right text-success">{r.closeRate}%</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr className="font-semibold">
                 <td className="py-2 pr-4">Totalt</td>
-                <td className="py-2 pr-4 text-right font-mono">{totalCalls}</td>
-                <td className="py-2 pr-4 text-right font-mono text-wood-700">
+                <td className="py-2 pr-4 text-right">{totalCalls}</td>
+                <td className="py-2 pr-4 text-right text-muted">
                   {(totalCalls / daysElapsed).toFixed(1)}
                 </td>
-                <td className="py-2 pr-4 text-right font-mono">{totalBooked}</td>
-                <td className="py-2 pr-4 text-right font-mono">{totalSigned}</td>
-                <td className="py-2 pr-4 text-right font-mono text-forest-700">
+                <td className="py-2 pr-4 text-right">{totalBooked}</td>
+                <td className="py-2 pr-4 text-right">{totalSigned}</td>
+                <td className="py-2 pr-4 text-right text-success">
                   {totalCalls ? Math.round((totalBooked / totalCalls) * 100) : 0}%
                 </td>
-                <td className="py-2 text-right font-mono text-forest-700">
+                <td className="py-2 text-right text-success">
                   {totalCalls ? Math.round((totalSigned / totalCalls) * 100) : 0}%
                 </td>
               </tr>
             </tfoot>
           </table>
         ) : (
-          <p className="py-6 text-center text-sm text-wood-700">
+          <p className="py-6 text-center text-sm text-muted">
             Ingen samtaler registrert i perioden ennå.
           </p>
         )}
-        <p className="mt-3 text-xs text-wood-700">
+        <p className="mt-3 text-xs text-muted">
           Møte-% = booket møter delt på samtaler · Close-% = signerte deals delt på samtaler ·
           Snitt/dag = samtaler delt på antall dager i perioden.
         </p>

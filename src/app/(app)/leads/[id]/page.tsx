@@ -31,7 +31,7 @@ export default async function LeadDetailPage({
 
   return (
     <div className="flex flex-col gap-4">
-      <Link href="/leads" className="inline-block font-pixel text-[10px] uppercase tracking-wide text-wood-700 hover:text-ink">
+      <Link href="/leads" className="inline-block eyebrow uppercase tracking-wide text-muted hover:text-fg">
         ← Tilbake til mine leads
       </Link>
       <LeadDetail lead={lead as Lead} activities={(activities as LeadActivity[]) ?? []} />

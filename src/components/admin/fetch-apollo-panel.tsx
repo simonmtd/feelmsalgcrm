@@ -47,7 +47,7 @@ export function FetchApolloPanel({
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <p className="text-sm text-wood-700">
+        <p className="text-sm text-muted">
           Henter ferske norske prospekter fra Apollo (Brønnøysund-sjekket). Velg
           hvem du vil ha inn. Selve importen er gratis. Med «Berik automatisk» på
           låses kontaktinfo opp med én gang (~8 credits per lead, maks 25 beriket
@@ -65,8 +65,8 @@ export function FetchApolloPanel({
                   key={g.key}
                   type="button"
                   onClick={() => toggleTitle(g.key)}
-                  className={`rounded-sm border-2 border-ink px-2.5 py-1 text-xs shadow-[2px_2px_0_0_var(--color-ink)] transition-colors ${
-                    active ? "bg-gold-400 text-ink" : "bg-wood-100 text-wood-800 hover:bg-gold-200"
+                  className={`rounded-md border border-line px-2.5 py-1 text-xs transition-colors ${
+                    active ? "bg-brand-soft text-fg" : "bg-surface-2 text-fg-2 hover:bg-surface-3"
                   }`}
                 >
                   {g.label}
@@ -146,14 +146,14 @@ export function FetchApolloPanel({
             <Label htmlFor="prospect-autoenrich">Berikelse</Label>
             <label
               htmlFor="prospect-autoenrich"
-              className="flex h-9 items-center gap-2 text-sm text-wood-800"
+              className="flex h-9 items-center gap-2 text-sm text-fg-2"
             >
               <input
                 id="prospect-autoenrich"
                 type="checkbox"
                 checked={autoEnrich}
                 onChange={(e) => setAutoEnrich(e.target.checked)}
-                className="h-4 w-4 accent-gold-500"
+                className="h-4 w-4 accent-brand"
               />
               Berik automatisk
             </label>
@@ -185,7 +185,7 @@ export function FetchApolloPanel({
           </Button>
         </div>
 
-        {msg && <p className="text-sm text-forest-700">{msg}</p>}
+        {msg && <p className="text-sm text-success">{msg}</p>}
       </CardContent>
     </Card>
   );

@@ -53,7 +53,7 @@ export function InfoPopover({
         aria-controls={open ? panelId : undefined}
         onClick={() => setOpen((value) => !value)}
         className={cn(
-          "transition-transform active:translate-x-[1px] active:translate-y-[1px]",
+          "transition-transform ",
           triggerClassName
         )}
       >
@@ -66,14 +66,14 @@ export function InfoPopover({
           role="dialog"
           aria-label={title}
           className={cn(
-            "absolute top-full z-30 mt-2 w-64 rounded-sm border-2 border-ink bg-parchment p-3 text-left shadow-[4px_4px_0_0_var(--color-ink)]",
+            "absolute top-full z-30 mt-2 w-64 rounded-xl border border-line-strong bg-surface-2 p-3.5 text-left shadow-2xl shadow-black/60",
             align === "right" ? "right-0" : "left-0"
           )}
         >
-          <p className="font-pixel text-[10px] uppercase leading-relaxed text-wood-900">
+          <p className="eyebrow uppercase leading-relaxed text-fg">
             {title}
           </p>
-          <div className="mt-2 space-y-1.5 text-xs leading-relaxed text-wood-800">
+          <div className="mt-2 space-y-1.5 text-xs leading-relaxed text-fg-2">
             {children}
           </div>
         </div>

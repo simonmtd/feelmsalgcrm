@@ -45,7 +45,7 @@ export function ResetPasswordButton({ sellerId }: { sellerId: string }) {
           Avbryt
         </Button>
       </div>
-      {message && <p className="text-xs text-wood-700">{message}</p>}
+      {message && <p className="text-xs text-muted">{message}</p>}
     </div>
   );
 }

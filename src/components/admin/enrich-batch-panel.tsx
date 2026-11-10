@@ -44,7 +44,7 @@ export function EnrichBatchPanel({
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        <p className="text-sm text-wood-700">
+        <p className="text-sm text-muted">
           Henter telefon/e-post fra Apollo for leads som mangler telefon. Fyller kun
           tomme felter. Telefon koster ~{ENRICH_PHONE_CREDITS} credits per lead.
         </p>
@@ -94,7 +94,7 @@ export function EnrichBatchPanel({
             </Button>
           ) : (
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-ink">
+              <span className="text-sm font-medium text-fg">
                 Berik {willProcess} leads (~{estCredits} credits)?
               </span>
               <Button type="button" size="sm" disabled={isPending} onClick={run}>
@@ -114,11 +114,11 @@ export function EnrichBatchPanel({
         </div>
 
         {willProcess === 0 && (
-          <p className="text-xs text-wood-600">
+          <p className="text-xs text-subtle">
             Ingen leads uten telefon i valgt omfang.
           </p>
         )}
-        {result && <p className="text-sm text-forest-700">{result}</p>}
+        {result && <p className="text-sm text-success">{result}</p>}
       </CardContent>
     </Card>
   );

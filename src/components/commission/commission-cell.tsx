@@ -19,7 +19,7 @@ export function CommissionCell({ meeting, canEdit }: { meeting: Meeting; canEdit
   const [note, setNote] = useState(meeting.notes ?? "");
   const [error, setError] = useState<string | null>(null);
 
-  if (meeting.type === "internal") return <span className="text-sm text-wood-600">–</span>;
+  if (meeting.type === "internal") return <span className="text-sm text-subtle">–</span>;
 
   if (meeting.commission_claimed) {
     return (
@@ -38,24 +38,24 @@ export function CommissionCell({ meeting, canEdit }: { meeting: Meeting; canEdit
                 setError(res.ok ? null : res.error ?? null);
               })
             }
-            className="text-xs text-wood-600 underline hover:text-ink disabled:opacity-50"
+            className="text-xs text-subtle underline hover:text-fg disabled:opacity-50"
           >
             Trekk tilbake
           </button>
         )}
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {error && <p className="text-xs text-danger">{error}</p>}
       </div>
     );
   }
 
-  if (!canEdit) return <span className="text-sm text-wood-600">–</span>;
+  if (!canEdit) return <span className="text-sm text-subtle">–</span>;
 
   if (!open) {
     return (
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 rounded-sm border-2 border-ink bg-wood-100 px-2 py-1 text-xs text-wood-800 transition-colors hover:bg-gold-300"
+        className="inline-flex items-center gap-1 rounded-md border border-line bg-surface-2 px-2 py-1 text-xs text-fg-2 transition-colors hover:bg-surface-3"
       >
         <Coins className="h-3.5 w-3.5" /> Krev {formatCurrency(COMMISSION_PER_MEETING)}
       </button>
@@ -82,15 +82,15 @@ export function CommissionCell({ meeting, canEdit }: { meeting: Meeting; canEdit
               setError(res.ok ? null : res.error ?? null);
             })
           }
-          className="rounded-sm border-2 border-ink bg-forest-500 px-2 py-1 text-xs font-bold text-parchment shadow-[2px_2px_0_0_var(--color-ink)] disabled:opacity-50"
+          className="rounded-md border border-line bg-success-soft px-2 py-1 text-xs font-bold text-fg disabled:opacity-50"
         >
           Send til godkjenning
         </button>
-        <button type="button" onClick={() => setOpen(false)} className="px-1 text-xs text-wood-600 hover:text-ink">
+        <button type="button" onClick={() => setOpen(false)} className="px-1 text-xs text-subtle hover:text-fg">
           Avbryt
         </button>
       </div>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
     </div>
   );
 }

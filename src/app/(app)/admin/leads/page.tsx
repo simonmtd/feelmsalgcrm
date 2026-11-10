@@ -8,6 +8,7 @@ import { TriggerAssignmentButton } from "@/components/admin/trigger-assignment-b
 import { FetchApolloPanel } from "@/components/admin/fetch-apollo-panel";
 import { ImportLeadsPanel } from "@/components/admin/import-leads-panel";
 import { EnrichBatchPanel } from "@/components/admin/enrich-batch-panel";
+import { LeadTools } from "@/components/admin/lead-tools";
 import { BulkAssignLeadsTable } from "@/components/admin/bulk-assign-leads-table";
 import { LeadMap } from "@/components/leads/lead-map";
 import { ViewToggle } from "@/components/leads/view-toggle";
@@ -132,29 +133,27 @@ export default async function AdminLeadsPage({
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        <ViewToggle
-          basePath="/admin/leads"
-          params={{ niche, status, q, period, quality }}
-          active={isMap ? "map" : "list"}
-        />
-        <TriggerAssignmentButton />
-      </div>
-
-      <FetchApolloPanel niches={(niches as Niche[] | null) ?? []} />
-
-      <ImportLeadsPanel />
-
-      <EnrichBatchPanel
-        missingAll={missingAll ?? 0}
-        missingAssigned={missingAssigned ?? 0}
+      <LeadTools
+        apollo={<FetchApolloPanel niches={(niches as Niche[] | null) ?? []} />}
+        csv={<ImportLeadsPanel />}
+        enrich={<EnrichBatchPanel missingAll={missingAll ?? 0} missingAssigned={missingAssigned ?? 0} />}
+        actions={
+          <>
+            <ViewToggle
+              basePath="/admin/leads"
+              params={{ niche, status, q, period, quality }}
+              active={isMap ? "map" : "list"}
+            />
+            <TriggerAssignmentButton />
+          </>
+        }
       />
 
       <Card>
         <CardContent className="pt-5">
           <form method="get" className="flex flex-wrap items-end gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-wood-700">Søk</label>
+              <label className="text-xs font-medium text-muted">Søk</label>
               <Input
                 name="q"
                 defaultValue={q ?? ""}
@@ -163,7 +162,7 @@ export default async function AdminLeadsPage({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-wood-700">Niche</label>
+              <label className="text-xs font-medium text-muted">Niche</label>
               <Select name="niche" defaultValue={niche ?? ""} className="w-48">
                 <option value="">Alle</option>
                 <option value="unclassified">Ikke klassifisert</option>
@@ -175,7 +174,7 @@ export default async function AdminLeadsPage({
               </Select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-wood-700">
+              <label className="text-xs font-medium text-muted">
                 Status
               </label>
               <Select
@@ -192,7 +191,7 @@ export default async function AdminLeadsPage({
               </Select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-wood-700">Periode</label>
+              <label className="text-xs font-medium text-muted">Periode</label>
               <Select name="period" defaultValue={period ?? ""} className="w-40">
                 <option value="">Hele tiden</option>
                 <option value="today">Nye i dag</option>
@@ -200,7 +199,7 @@ export default async function AdminLeadsPage({
               </Select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-wood-700">Kvalitet</label>
+              <label className="text-xs font-medium text-muted">Kvalitet</label>
               <Select name="quality" defaultValue={quality ?? ""} className="w-40">
                 <option value="">Alle</option>
                 <option value="phone">Kun med telefon</option>
@@ -230,7 +229,7 @@ export default async function AdminLeadsPage({
 
           {totalPages > 1 && (
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="font-mono text-xs text-wood-700">
+              <p className="text-xs text-muted">
                 Viser {rangeFrom}–{rangeTo} av {total} leads · side {pageNum} av {totalPages}
               </p>
               <div className="flex items-center gap-2">
