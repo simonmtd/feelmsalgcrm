@@ -1,4 +1,6 @@
+import { Download } from "lucide-react";
 import { requireAdmin } from "@/lib/dal";
+import { buttonVariants } from "@/components/ui/button";
 import { loadCommissionMeetings, groupBy, type CommissionMeeting } from "@/lib/commission-data";
 import { commissionMonth, commissionWeek, monthLabel } from "@/lib/commission";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -107,9 +109,14 @@ export default async function AdminCommissionPage() {
           ) : (
             months.map(([month, ms]) => (
               <div key={month}>
-                <p className="mb-2 font-medium capitalize text-fg">
-                  {monthLabel(month)} · {formatCurrency(ms.reduce((s, m) => s + m.commission_amount, 0))}
-                </p>
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-medium capitalize text-fg">
+                    {monthLabel(month)} · {formatCurrency(ms.reduce((s, m) => s + m.commission_amount, 0))}
+                  </p>
+                  <a href={`/admin/provisjon/export?month=${month}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+                    <Download /> Last ned CSV
+                  </a>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {groupBy(ms, sellerName).map(([name, sm]) => (
                     <Badge key={name} variant="green">
