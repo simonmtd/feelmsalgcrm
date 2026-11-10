@@ -14,6 +14,7 @@ import {
   Bot,
   Coins,
   PhoneCall,
+  Copy,
   type LucideIcon,
 } from "lucide-react";
 import type { Profile } from "@/lib/types";
@@ -52,6 +53,7 @@ export function navSections(profile: Pick<Profile, "role">): NavSection[] {
           { href: "/admin/stats", label: "Statistikk", icon: BarChart3 },
           { href: "/admin/sellers", label: "Selgere", icon: Users },
           { href: "/admin/niches", label: "Nicher", icon: Tags },
+          { href: "/admin/duplikater", label: "Duplikater", icon: Copy },
           { href: "/admin/sync", label: "Sync", icon: RefreshCw },
           { href: "/admin/audit", label: "Aktivitetslogg", icon: ScrollText },
           { href: "/admin/settings", label: "Innstillinger", icon: Settings },

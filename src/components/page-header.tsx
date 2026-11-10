@@ -36,6 +36,7 @@ const TITLES: TitleEntry[] = [
   { match: (p) => p === "/admin/stats", title: "Statistikk", description: "Ytelse per selger — leads, vinnrate og verdi" },
   { match: (p) => p === "/admin/sellers", title: "Selgere", description: "Opprett og administrer brukere" },
   { match: (p) => p === "/admin/niches", title: "Nicher", description: "Bransjene selgerne velger mellom hver dag" },
+  { match: (p) => p === "/admin/duplikater", title: "Duplikater", description: "Samme person flere ganger? Velg hvem som beholdes og slå sammen" },
   { match: (p) => p === "/admin/sync", title: "HubSpot-sync", description: "Historikk og manuell trigger av kontakt-import" },
   { match: (p) => p === "/admin/audit", title: "Aktivitetslogg", description: "Sporbar logg over admin-handlinger i systemet" },
   { match: (p) => p === "/admin/settings", title: "Innstillinger", description: "Styrer hvordan daglig lead-fordeling fungerer" },
