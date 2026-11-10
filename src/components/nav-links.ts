@@ -13,6 +13,7 @@ import {
   ScrollText,
   Bot,
   Coins,
+  PhoneCall,
   type LucideIcon,
 } from "lucide-react";
 import type { Profile } from "@/lib/types";
@@ -37,6 +38,7 @@ export function navSections(profile: Pick<Profile, "role">): NavSection[] {
         links: [
           { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
           { href: "/leads", label: "Mine leads", icon: ListChecks },
+          { href: "/ring", label: "Ringemodus", icon: PhoneCall },
           { href: "/meetings", label: "Møter", icon: Handshake },
           { href: "/calendar", label: "Kalender", icon: CalendarDays },
           { href: "/grok", label: "Grok-import", icon: Bot },
@@ -63,6 +65,7 @@ export function navSections(profile: Pick<Profile, "role">): NavSection[] {
       links: [
         { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/today", label: "Dagens leads", icon: CalendarCheck },
+        { href: "/ring", label: "Ringemodus", icon: PhoneCall },
         { href: "/leads", label: "Mine leads", icon: ListChecks },
         { href: "/meetings", label: "Mine møter", icon: Handshake },
         { href: "/provisjon", label: "Min provisjon", icon: Coins },

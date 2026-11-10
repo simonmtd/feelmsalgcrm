@@ -5,13 +5,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { LeadMap } from "@/components/leads/lead-map";
 import { ViewToggle } from "@/components/leads/view-toggle";
 import { LeadBoard } from "@/components/leads/lead-board";
+import { applyTodoFilter } from "@/lib/lead-filters";
 import { NewLeadForm } from "@/components/leads/new-lead-form";
 import { LogCallForm } from "@/components/leads/log-call-form";
 import Link from "next/link";
+import { PhoneCall } from "lucide-react";
 import { LEAD_STATUS_LABELS, FILMING_STATUS_LABELS } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import type { Lead, LeadStatus, FilmingStatus, Niche, Profile } from "@/lib/types";
@@ -64,45 +66,7 @@ export default async function LeadsPage({
   let leads = (leadsRaw as Lead[] | null) ?? [];
 
   // "Å gjøre"-filtre for å hindre at leads faller mellom stolene.
-  if (todo === "uncontacted") {
-    leads = leads.filter((l) => l.status === "new" || l.status === "assigned");
-  } else if (todo === "overdue") {
-    const now = new Date().getTime();
-    leads = leads.filter(
-      (l) =>
-        ["new", "assigned", "contacted", "follow_up"].includes(l.status) &&
-        l.next_follow_up_at != null &&
-        new Date(l.next_follow_up_at).getTime() <= now
-    );
-  } else if (todo === "stale") {
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 3);
-    const cutoffStr = cutoff.toISOString().slice(0, 10);
-    leads = leads.filter(
-      (l) =>
-        (l.status === "new" || l.status === "assigned") &&
-        l.assigned_date != null &&
-        l.assigned_date <= cutoffStr
-    );
-  } else if (todo === "no_answer") {
-    // Leads to ring back: the most recent registered call was "ikke svar" and
-    // the lead is still open. Latest outcome wins, so a later successful call
-    // takes it off the list.
-    const { data: calls } = await supabase
-      .from("call_logs")
-      .select("lead_id, outcome, created_at")
-      .eq("seller_id", profile.id)
-      .not("lead_id", "is", null)
-      .order("created_at", { ascending: false });
-    const latestOutcome = new Map<string, string | null>();
-    for (const c of (calls as { lead_id: string | null; outcome: string | null }[] | null) ?? []) {
-      if (c.lead_id && !latestOutcome.has(c.lead_id)) latestOutcome.set(c.lead_id, c.outcome);
-    }
-    leads = leads.filter(
-      (l) =>
-        latestOutcome.get(l.id) === "no_answer" && l.status !== "won" && l.status !== "lost"
-    );
-  }
+  leads = await applyTodoFilter(supabase, profile.id, leads, todo);
 
   // Free-text search across the fields a seller looks a lead up by.
   if (search) {
@@ -150,6 +114,12 @@ export default async function LeadsPage({
           active={isMap ? "map" : isBoard ? "board" : "list"}
           withBoard
         />
+      </div>
+
+      <div className="flex justify-end">
+        <Link href={todo ? `/ring?todo=${todo}` : "/ring"} className={buttonVariants()}>
+          <PhoneCall /> Start ringing
+        </Link>
       </div>
 
       <NewLeadForm

@@ -33,3 +33,28 @@ export function formatDateTime(value: string | null | undefined) {
     minute: "2-digit",
   }).format(new Date(value));
 }
+
+/**
+ * A phone number split into an optional country prefix and digits grouped the
+ * Norwegian way ("920 27 788"), for reading off the screen while dialling.
+ */
+export function formatPhoneParts(raw: string | null | undefined): { prefix: string | null; number: string } {
+  const cleaned = (raw ?? "").replace(/[^\d+]/g, "");
+  let prefix: string | null = null;
+  let digits = cleaned;
+  if (digits.startsWith("+47")) {
+    prefix = "+47";
+    digits = digits.slice(3);
+  } else if (digits.startsWith("0047")) {
+    prefix = "+47";
+    digits = digits.slice(4);
+  } else if (digits.startsWith("+")) {
+    return { prefix: null, number: raw ?? "" };
+  }
+  if (digits.length !== 8) return { prefix, number: digits || (raw ?? "") };
+  // Mobiles (4/9) read as 3-2-3, landlines as 2-2-2-2.
+  const number = /^[49]/.test(digits)
+    ? `${digits.slice(0, 3)} ${digits.slice(3, 5)} ${digits.slice(5)}`
+    : `${digits.slice(0, 2)} ${digits.slice(2, 4)} ${digits.slice(4, 6)} ${digits.slice(6)}`;
+  return { prefix, number };
+}

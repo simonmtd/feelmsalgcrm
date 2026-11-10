@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { PhoneCall } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
 import { requireProfile } from "@/lib/dal";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
@@ -41,16 +43,24 @@ export default async function TodayPage() {
 
   return (
     <>
-      <div className="rounded-md border border-line bg-surface p-3 ">
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <p className="eyebrow uppercase leading-relaxed tracking-wide text-fg">
-            {handled}/{leads.length} fulgt opp i dag
-          </p>
-          <p className="text-[11px] text-fg-2">
-            {dateLabel} · potensiell verdi {formatCurrency(totalValue)}
-          </p>
+      <div className="flex flex-wrap items-center gap-4 rounded-xl border border-line bg-surface p-4">
+        <div className="min-w-60 flex-1">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <p className="text-sm text-muted">
+              <span className="font-medium text-fg">
+                {handled} av {leads.length}
+              </span>{" "}
+              fulgt opp i dag
+            </p>
+            <p className="text-xs text-subtle">
+              <span className="capitalize">{dateLabel}</span> · potensiell verdi {formatCurrency(totalValue)}
+            </p>
+          </div>
+          <PixelProgress percent={percent} className="mt-2.5" />
         </div>
-        <PixelProgress percent={percent} className="mt-2" />
+        <Link href="/ring?from=today" className={buttonVariants()}>
+          <PhoneCall /> Start ringing
+        </Link>
       </div>
 
       {statusCounts.length > 0 && (

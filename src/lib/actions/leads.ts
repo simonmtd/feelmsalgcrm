@@ -181,16 +181,17 @@ const CALL_OUTCOMES: Record<
  * sets (or clears) the next follow-up date — all in one action, so a seller
  * working the phone doesn't have to touch three separate controls per call.
  */
-export async function logCallOutcome(leadId: string, outcome: CallOutcome) {
+export async function logCallOutcome(leadId: string, outcome: CallOutcome, note?: string) {
   const cfg = CALL_OUTCOMES[outcome];
   if (!cfg) throw new Error("Ugyldig samtaleutfall.");
   const { profile, supabase } = await assertOwnsLead(leadId);
+  const extra = (note ?? "").trim().slice(0, 2000);
 
   const { error: actErr } = await supabase.from("lead_activities").insert({
     lead_id: leadId,
     seller_id: profile.id,
     type: "call" as ActivityType,
-    content: cfg.note,
+    content: extra ? `${cfg.note}: ${extra}` : cfg.note,
   });
   if (actErr) throwSafe("logCallOutcome", actErr);
 
