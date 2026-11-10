@@ -55,7 +55,7 @@ export function CommissionCell({ meeting, canEdit }: { meeting: Meeting; canEdit
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 rounded-md border border-line bg-surface-2 px-2 py-1 text-xs text-fg-2 transition-colors hover:bg-surface-3"
+        className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-subtle transition-colors hover:text-brand group-hover:text-muted"
       >
         <Coins className="h-3.5 w-3.5" /> Krev {formatCurrency(COMMISSION_PER_MEETING)}
       </button>

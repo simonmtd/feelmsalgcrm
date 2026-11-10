@@ -1,10 +1,9 @@
 "use client";
 
 import { useMemo, useState, useTransition, useActionState } from "react";
-import { Plus, X, MapPin, Trash2, Building2, CheckCircle2 } from "lucide-react";
+import { Plus, X, Trash2, CheckCircle2, Search } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -19,94 +18,101 @@ import { LeadCombobox } from "@/components/meetings/lead-combobox";
 import { CommissionCell } from "@/components/commission/commission-cell";
 import { Textarea } from "@/components/ui/textarea";
 import { Stat } from "@/components/ui/stat";
-import { COMMISSION_PER_MEETING } from "@/lib/commission";
+import { COMMISSION_PER_MEETING, commissionWeek } from "@/lib/commission";
+import { segmented } from "@/components/ui/segmented";
+import { avatarToneFor, initialsFor } from "@/lib/avatar-color";
 import { formatCurrency, cn } from "@/lib/utils";
 import { MEETING_TYPE_LABELS, PRODUCT_TYPE_LABELS } from "@/lib/types";
 import type { Lead, Meeting, MeetingType, ProductType, Profile } from "@/lib/types";
 
-const MEETING_TYPE_VARIANT: Record<MeetingType, "amber" | "blue" | "green" | "default" | "purple"> = {
-  sales_meeting: "amber",
-  demo: "blue",
-  follow_up: "green",
-  internal: "default",
-  other: "purple",
+const TYPE_DOT: Record<MeetingType, string> = {
+  sales_meeting: "bg-brand",
+  demo: "bg-info",
+  follow_up: "bg-success",
+  internal: "bg-subtle",
+  other: "bg-violet",
 };
 
 const initialState: MeetingActionState = {};
 
-function formatWhen(startsAt: string, endsAt: string) {
-  const start = new Date(startsAt);
-  const end = new Date(endsAt);
-  const date = start.toLocaleDateString("nb-NO", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-  });
-  const opts: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" };
-  return `${date} · ${start.toLocaleTimeString("nb-NO", opts)}–${end.toLocaleTimeString("nb-NO", opts)}`;
+function sellerLabel(m: Meeting) {
+  return m.seller?.full_name ?? m.seller?.email ?? "Ukjent";
 }
+
+const TIME: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Oslo" };
 
 function MeetingRow({
   meeting,
   canEdit,
+  showSeller,
   onChanged,
 }: {
   meeting: Meeting;
   canEdit: boolean;
+  showSeller: boolean;
   onChanged: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const [signing, setSigning] = useState(false);
   const [amount, setAmount] = useState("");
+  const start = new Date(meeting.starts_at);
+  const end = new Date(meeting.ends_at);
+  const meta = [
+    MEETING_TYPE_LABELS[meeting.type],
+    meeting.product_type ? PRODUCT_TYPE_LABELS[meeting.product_type] : null,
+    meeting.location,
+  ].filter(Boolean);
 
   return (
-    <tr className="border-b border-line align-top">
-      <td className="py-3 pr-4">
-        <p className="font-medium text-fg">{meeting.title}</p>
-        <p className="mt-0.5 text-xs text-muted">
-          {formatWhen(meeting.starts_at, meeting.ends_at)}
+    <tr className="group border-t border-line align-top transition-colors hover:bg-surface-2/50">
+      {/* Calendar-style date block: the eye scans down the days. */}
+      <td className="w-28 py-3 pl-1 pr-4">
+        <div className="flex items-baseline gap-1.5">
+          <span className="display text-[28px] text-fg">
+            {start.toLocaleDateString("nb-NO", { day: "2-digit", timeZone: "Europe/Oslo" }).replace(".", "")}
+          </span>
+          <span className="eyebrow text-subtle">
+            {start.toLocaleDateString("nb-NO", { weekday: "short", timeZone: "Europe/Oslo" }).replace(".", "")}
+          </span>
+        </div>
+        <p className="mt-1 whitespace-nowrap text-xs text-subtle">
+          {start.toLocaleTimeString("nb-NO", TIME)}–{end.toLocaleTimeString("nb-NO", TIME)}
         </p>
-        {meeting.location && (
-          <p className="mt-1 flex items-center gap-1 text-xs text-subtle">
-            <MapPin className="h-3 w-3" /> {meeting.location}
-          </p>
-        )}
+      </td>
+      <td className="min-w-56 py-3 pr-4">
+        <p className="font-medium text-fg">{meeting.title}</p>
+        <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted">
+          <span className={cn("h-1.5 w-1.5 rounded-full", TYPE_DOT[meeting.type])} />
+          {meta.join(" · ")}
+        </p>
         {meeting.notes && (
-          <p className="mt-1 max-w-xs whitespace-pre-line text-xs italic text-muted">{meeting.notes}</p>
+          <p className="mt-1 line-clamp-1 max-w-md text-xs italic text-subtle" title={meeting.notes}>
+            {meeting.notes}
+          </p>
         )}
       </td>
       <td className="py-3 pr-4">
         {meeting.lead ? (
-          <Link
-            href={`/leads/${meeting.lead.id}`}
-            className="flex items-start gap-1.5 text-sm text-fg hover:underline"
-          >
-            <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-subtle" />
-            <span>
-              {meeting.lead.company_name ?? "Ukjent firma"}
-              {meeting.lead.contact_name && (
-                <span className="block text-xs text-muted">{meeting.lead.contact_name}</span>
-              )}
-            </span>
+          <Link href={`/leads/${meeting.lead.id}`} className="block text-sm text-fg-2 hover:text-fg hover:underline">
+            {meeting.lead.company_name ?? "Ukjent firma"}
+            {meeting.lead.contact_name && <span className="block text-xs text-subtle">{meeting.lead.contact_name}</span>}
           </Link>
         ) : (
           <span className="text-sm text-subtle">–</span>
         )}
       </td>
-      <td className="py-3 pr-4">
-        <Badge variant={MEETING_TYPE_VARIANT[meeting.type]}>
-          {MEETING_TYPE_LABELS[meeting.type]}
-        </Badge>
-      </td>
-      <td className="py-3 pr-4">
-        {meeting.product_type ? (
-          <span className="text-sm text-fg">{PRODUCT_TYPE_LABELS[meeting.product_type]}</span>
-        ) : (
-          <span className="text-sm text-subtle">–</span>
-        )}
-      </td>
-      <td className="py-3 pr-4 text-sm font-bold text-fg">
-        {formatCurrency(meeting.deal_size)}
+      {showSeller && (
+        <td className="py-3 pr-4">
+          <span className="flex items-center gap-2 text-sm text-fg-2" title={sellerLabel(meeting)}>
+            <span className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold", avatarToneFor(meeting.seller_id))}>
+              {initialsFor(sellerLabel(meeting))}
+            </span>
+            <span className="hidden truncate xl:inline">{sellerLabel(meeting).split(" ")[0]}</span>
+          </span>
+        </td>
+      )}
+      <td className="py-3 pr-4 text-right text-sm font-medium text-fg">
+        {meeting.deal_size != null ? formatCurrency(meeting.deal_size) : <span className="text-subtle">–</span>}
       </td>
       <td className="py-3 pr-4">
         {meeting.signed ? (
@@ -120,7 +126,7 @@ function MeetingRow({
               })
             }
             title={canEdit ? "Klikk for å angre signert" : "Signert"}
-            className="inline-flex items-center gap-1 rounded-md border border-line bg-success-soft px-2 py-1 text-xs font-bold text-fg disabled:opacity-70"
+            className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success disabled:cursor-default"
           >
             <CheckCircle2 className="h-3.5 w-3.5" /> Signert
           </button>
@@ -136,29 +142,21 @@ function MeetingRow({
                 placeholder="Beløp"
                 className="h-8 w-24 text-xs"
               />
-              <button
+              <Button
                 type="button"
+                size="sm"
                 disabled={isPending}
                 onClick={() =>
                   startTransition(async () => {
-                    await setMeetingSigned(
-                      meeting.id,
-                      true,
-                      amount.trim() ? Number(amount) : null
-                    );
+                    await setMeetingSigned(meeting.id, true, amount.trim() ? Number(amount) : null);
                     setSigning(false);
                     onChanged();
                   })
                 }
-                className="rounded-md border border-line bg-success-soft px-2 py-1 text-xs font-bold text-fg disabled:opacity-50"
               >
                 Signer
-              </button>
-              <button
-                type="button"
-                onClick={() => setSigning(false)}
-                className="px-1 text-xs text-subtle hover:text-fg"
-              >
+              </Button>
+              <button type="button" onClick={() => setSigning(false)} className="px-1 text-xs text-subtle hover:text-fg">
                 Avbryt
               </button>
             </div>
@@ -170,7 +168,7 @@ function MeetingRow({
                 setAmount(meeting.deal_size != null ? String(meeting.deal_size) : "");
                 setSigning(true);
               }}
-              className="inline-flex items-center gap-1 rounded-md border border-line bg-surface-2 px-2 py-1 text-xs text-fg-2 transition-colors hover:bg-surface-3 disabled:opacity-50"
+              className="whitespace-nowrap text-xs text-subtle transition-colors hover:text-success group-hover:text-muted"
             >
               Marker signert
             </button>
@@ -179,10 +177,10 @@ function MeetingRow({
           <span className="text-sm text-subtle">–</span>
         )}
       </td>
-      <td className="py-3 pr-4">
+      <td className="py-3 pr-2">
         <CommissionCell meeting={meeting} canEdit={canEdit} />
       </td>
-      <td className="py-3">
+      <td className="w-8 py-3">
         {canEdit && (
           <button
             type="button"
@@ -194,13 +192,78 @@ function MeetingRow({
                 onChanged();
               })
             }
-            className="rounded-md border border-transparent p-1 text-subtle transition-colors hover:border-line hover:bg-danger-soft hover:text-fg disabled:opacity-50"
+            className="rounded-md p-1 text-subtle opacity-0 transition hover:bg-danger-soft hover:text-danger focus-visible:opacity-100 group-hover:opacity-100 disabled:opacity-50"
           >
             <Trash2 className="h-4 w-4" />
           </button>
         )}
       </td>
     </tr>
+  );
+}
+
+/** Meetings grouped by week, each week with its own summary line. */
+function MeetingTable({
+  meetings,
+  profile,
+  showSeller,
+  onChanged,
+}: {
+  meetings: Meeting[];
+  profile: Profile;
+  showSeller: boolean;
+  onChanged: () => void;
+}) {
+  const weeks = useMemo(() => {
+    const map = new Map<string, { label: string; items: Meeting[] }>();
+    for (const m of meetings) {
+      const w = commissionWeek(m.starts_at);
+      if (!map.has(w.key)) map.set(w.key, { label: w.label, items: [] });
+      map.get(w.key)!.items.push(m);
+    }
+    return [...map.values()];
+  }, [meetings]);
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        {weeks.map((w) => {
+          const signed = w.items.filter((m) => m.signed);
+          const signedValue = signed.reduce((s, m) => s + (m.deal_size ?? 0), 0);
+          return (
+            <tbody key={w.label}>
+              <tr>
+                <td colSpan={showSeller ? 8 : 7} className="pb-2 pt-6 first:pt-0">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <p className="text-sm font-semibold text-fg">{w.label}</p>
+                    <p className="text-xs text-subtle">
+                      {w.items.length} {w.items.length === 1 ? "møte" : "møter"}
+                      {signed.length > 0 && (
+                        <>
+                          {" · "}
+                          <span className="text-success">
+                            {signed.length} signert · {formatCurrency(signedValue)}
+                          </span>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </td>
+              </tr>
+              {w.items.map((meeting) => (
+                <MeetingRow
+                  key={meeting.id}
+                  meeting={meeting}
+                  showSeller={showSeller}
+                  canEdit={profile.role === "admin" || meeting.seller_id === profile.id}
+                  onChanged={onChanged}
+                />
+              ))}
+            </tbody>
+          );
+        })}
+      </table>
+    </div>
   );
 }
 
@@ -217,19 +280,30 @@ export function MeetingsView({
 }) {
   const [showForm, setShowForm] = useState(false);
   const [productFilter, setProductFilter] = useState("");
+  const [signedFilter, setSignedFilter] = useState<"all" | "signed" | "unsigned">("all");
+  const [sellerFilter, setSellerFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const [pastWeeks, setPastWeeks] = useState(4);
+  const isAdmin = profile.role === "admin";
   const [defaultDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [state, formAction] = useActionState(createMeeting, initialState);
   const [, startTransition] = useTransition();
   // Captured once so the upcoming/past split stays stable across re-renders.
   const [now] = useState(() => Date.now());
 
-  const filtered = useMemo(
-    () =>
-      productFilter
-        ? meetings.filter((m) => m.product_type === productFilter)
-        : meetings,
-    [meetings, productFilter]
-  );
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return meetings.filter(
+      (m) =>
+        (!productFilter || m.product_type === productFilter) &&
+        (!sellerFilter || m.seller_id === sellerFilter) &&
+        (signedFilter === "all" || (signedFilter === "signed") === m.signed) &&
+        (!q ||
+          [m.title, m.notes, m.location, m.lead?.company_name, m.lead?.contact_name]
+            .filter(Boolean)
+            .some((f) => f!.toLowerCase().includes(q)))
+    );
+  }, [meetings, productFilter, sellerFilter, signedFilter, search]);
 
   const upcoming = useMemo(
     () =>
@@ -245,6 +319,13 @@ export function MeetingsView({
         .sort((a, b) => b.starts_at.localeCompare(a.starts_at)),
     [filtered, now]
   );
+
+  // Only the latest N weeks of past meetings; «Vis eldre» adds more.
+  const pastWeekKeys = useMemo(() => [...new Set(past.map((m) => commissionWeek(m.starts_at).key))], [past]);
+  const visiblePast = useMemo(() => {
+    const keep = new Set(pastWeekKeys.slice(0, pastWeeks));
+    return past.filter((m) => keep.has(commissionWeek(m.starts_at).key));
+  }, [past, pastWeekKeys, pastWeeks]);
 
   const pipelineValue = upcoming.reduce((sum, m) => sum + (m.deal_size ?? 0), 0);
   const totalValue = filtered.reduce((sum, m) => sum + (m.deal_size ?? 0), 0);
@@ -303,25 +384,50 @@ export function MeetingsView({
         </Card>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-fg-2">Produkt:</span>
-          <Select
-            aria-label="Filtrer på produkt"
-            value={productFilter}
-            onChange={(e) => setProductFilter(e.target.value)}
-            className="w-52"
-          >
-            <option value="">Alle</option>
-            {Object.entries(PRODUCT_TYPE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative w-full sm:w-56">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" />
+          <Input
+            aria-label="Søk i møter"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Søk møte eller kunde…"
+            className="pl-9"
+          />
+        </div>
+        <div className={segmented.root}>
+          {(
+            [
+              ["all", "Alle"],
+              ["unsigned", "Ikke signert"],
+              ["signed", "Signert"],
+            ] as const
+          ).map(([key, label]) => (
+            <button key={key} type="button" onClick={() => setSignedFilter(key)} className={segmented.item(signedFilter === key)}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {isAdmin && (
+          <Select aria-label="Filtrer på selger" value={sellerFilter} onChange={(e) => setSellerFilter(e.target.value)} className="w-auto">
+            <option value="">Alle selgere</option>
+            {team.map((member) => (
+              <option key={member.id} value={member.id}>
+                {member.full_name ?? member.email}
               </option>
             ))}
           </Select>
-        </div>
-        <Button type="button" size="sm" onClick={() => setShowForm((v) => !v)}>
-          {showForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+        )}
+        <Select aria-label="Filtrer på produkt" value={productFilter} onChange={(e) => setProductFilter(e.target.value)} className="w-auto">
+          <option value="">Alle produkter</option>
+          {Object.entries(PRODUCT_TYPE_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </Select>
+        <Button type="button" className="ml-auto" onClick={() => setShowForm((v) => !v)}>
+          {showForm ? <X /> : <Plus />}
           Registrer møte
         </Button>
       </div>
@@ -421,73 +527,36 @@ export function MeetingsView({
       )}
 
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>Kommende ({upcoming.length})</CardTitle>
+        <CardHeader>
+          <CardTitle>
+            Kommende <span className="font-normal text-subtle">{upcoming.length}</span>
+          </CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
+        <CardContent>
           {upcoming.length ? (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-line text-left text-[11px] font-medium uppercase tracking-wider text-subtle">
-                  <th className="py-2 pr-4">Møte</th>
-                  <th className="py-2 pr-4">Kunde</th>
-                  <th className="py-2 pr-4">Type</th>
-                  <th className="py-2 pr-4">Produkt</th>
-                  <th className="py-2 pr-4">Deal size</th>
-                  <th className="py-2 pr-4">Signert</th>
-                  <th className="py-2 pr-4">Provisjon</th>
-                  <th className="py-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {upcoming.map((meeting) => (
-                  <MeetingRow
-                    key={meeting.id}
-                    meeting={meeting}
-                    canEdit={profile.role === "admin" || meeting.seller_id === profile.id}
-                    onChanged={refresh}
-                  />
-                ))}
-              </tbody>
-            </table>
+            <MeetingTable meetings={upcoming} profile={profile} showSeller={isAdmin} onChanged={refresh} />
           ) : (
-            <p className="py-6 text-center text-sm text-muted">
-              Ingen kommende møter registrert.
-            </p>
+            <p className="py-6 text-center text-sm text-muted">Ingen kommende møter{search || sellerFilter || productFilter || signedFilter !== "all" ? " som matcher filteret" : " registrert"}.</p>
           )}
         </CardContent>
       </Card>
 
       {past.length > 0 && (
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle>Gjennomførte ({past.length})</CardTitle>
+          <CardHeader>
+            <CardTitle>
+              Gjennomførte <span className="font-normal text-subtle">{past.length}</span>
+            </CardTitle>
           </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <table className={cn("w-full text-sm", "opacity-80")}>
-              <thead>
-                <tr className="border-b border-line text-left text-[11px] font-medium uppercase tracking-wider text-subtle">
-                  <th className="py-2 pr-4">Møte</th>
-                  <th className="py-2 pr-4">Kunde</th>
-                  <th className="py-2 pr-4">Type</th>
-                  <th className="py-2 pr-4">Produkt</th>
-                  <th className="py-2 pr-4">Deal size</th>
-                  <th className="py-2 pr-4">Signert</th>
-                  <th className="py-2 pr-4">Provisjon</th>
-                  <th className="py-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {past.map((meeting) => (
-                  <MeetingRow
-                    key={meeting.id}
-                    meeting={meeting}
-                    canEdit={profile.role === "admin" || meeting.seller_id === profile.id}
-                    onChanged={refresh}
-                  />
-                ))}
-              </tbody>
-            </table>
+          <CardContent>
+            <MeetingTable meetings={visiblePast} profile={profile} showSeller={isAdmin} onChanged={refresh} />
+            {pastWeekKeys.length > pastWeeks && (
+              <div className="mt-5 flex justify-center">
+                <Button type="button" variant="outline" size="sm" onClick={() => setPastWeeks((n) => n + 4)}>
+                  Vis eldre ({pastWeekKeys.length - pastWeeks} uker til)
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
