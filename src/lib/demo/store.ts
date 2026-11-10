@@ -186,6 +186,8 @@ function buildSeed(): DemoStore {
       country: null,
       employee_count: null,
       email_status: null,
+      last_call_outcome: null,
+      last_call_at: null,
       duplicate_of: null,
       raw_hubspot_data: null,
       created_at: createdAt,
@@ -393,6 +395,20 @@ function buildSeed(): DemoStore {
   }
 
   const leadByName = (name: string) => leads.find((l) => l.company_name === name);
+
+  // Give the demo some call history so "Siste samtale" / "Kan ringes igjen" show up.
+  for (const [i, lead] of leads.entries()) {
+    const outcome =
+      lead.status === "contacted" ? (i % 2 ? "no_answer" : "voicemail")
+      : lead.status === "follow_up" ? "interested"
+      : lead.status === "won" ? "meeting_booked"
+      : lead.status === "lost" ? "not_interested"
+      : null;
+    if (outcome) {
+      lead.last_call_outcome = outcome;
+      lead.last_call_at = daysAgo(3 + (i % 9), 11);
+    }
+  }
 
   const meetings: Meeting[] = [
     addMeeting({ seller: admin, title: "Ukentlig salgsmøte", type: "internal", day: 0, startHour: 9, endHour: 9, endMinute: 30, location: "Teams" }),

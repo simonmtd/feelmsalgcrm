@@ -21,11 +21,15 @@ export function TodoTiles({
   active,
   queueCount,
   ringHref,
+  action,
 }: {
   tiles: TodoTile[];
   active: string | null;
-  queueCount: number;
-  ringHref: string;
+  /** With ringHref: the pink «Start ringing» tile at the end. */
+  queueCount?: number;
+  ringHref?: string;
+  /** Any other last tile (used instead of the ring tile). */
+  action?: React.ReactNode;
 }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
@@ -59,11 +63,13 @@ export function TodoTiles({
         );
       })}
 
+      {action}
+      {ringHref && (
       <Link
         href={ringHref}
         className={cn(
           "group relative col-span-2 flex flex-col justify-between gap-4 overflow-hidden rounded-xl bg-brand p-4 text-brand-fg transition-colors hover:bg-brand-hover sm:col-span-1",
-          queueCount === 0 && "opacity-60"
+          !queueCount && "opacity-60"
         )}
       >
         {/* Oversized ghost icon: a bit of Feelm swagger in the corner. */}
@@ -72,10 +78,11 @@ export function TodoTiles({
           Start ringing <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
         </p>
         <div className="relative">
-          <p className="display text-[44px]">{queueCount}</p>
+          <p className="display text-[44px]">{queueCount ?? 0}</p>
           <p className="mt-1.5 text-xs font-medium opacity-70">i køen nå</p>
         </div>
       </Link>
+      )}
     </div>
   );
 }

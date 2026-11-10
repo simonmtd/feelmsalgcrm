@@ -10,7 +10,7 @@ type TableName = keyof Omit<DemoStore, "credentials">;
  * by the alias used in the select string.
  */
 const EMBEDS: Record<string, Record<string, { table: TableName; fk: string }>> = {
-  leads: { niche: { table: "niches", fk: "niche_id" } },
+  leads: { niche: { table: "niches", fk: "niche_id" }, assigned_seller: { table: "profiles", fk: "assigned_to" } },
   profiles: { active_niche: { table: "niches", fk: "active_niche_id" } },
   lead_activities: { seller: { table: "profiles", fk: "seller_id" } },
   meetings: { seller: { table: "profiles", fk: "seller_id" }, lead: { table: "leads", fk: "lead_id" } },
@@ -147,6 +147,15 @@ export class MockQueryBuilder implements PromiseLike<{ data: unknown; error: nul
       "i"
     );
     this.filters.push((r) => typeof r[col] === "string" && re.test(r[col] as string));
+    return this;
+  }
+
+  /** Generic PostgREST filter; only the `in` operator ('("a","b")') is emulated. */
+  filter(col: string, op: string, val: string) {
+    if (op === "in") {
+      const vals = val.replace(/^\(|\)$/g, "").split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
+      this.filters.push((r) => vals.includes(String(r[col])));
+    }
     return this;
   }
 

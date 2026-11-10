@@ -9,7 +9,10 @@ export function LeadNicheSelect({
   leadId,
   nicheId,
   niches,
+  className = "w-40",
 }: {
+  /** Overrides the default field look, e.g. a quiet in-table style. */
+  className?: string;
   leadId: string;
   nicheId: string | null;
   niches: Niche[];
@@ -18,7 +21,7 @@ export function LeadNicheSelect({
 
   return (
     <Select
-      className="w-40"
+      className={className}
       defaultValue={nicheId ?? ""}
       disabled={isPending}
       onChange={(e) => {

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,11 @@ import { FetchApolloPanel } from "@/components/admin/fetch-apollo-panel";
 import { ImportLeadsPanel } from "@/components/admin/import-leads-panel";
 import { EnrichBatchPanel } from "@/components/admin/enrich-batch-panel";
 import { LeadTools } from "@/components/admin/lead-tools";
-import { BulkAssignLeadsTable } from "@/components/admin/bulk-assign-leads-table";
+import { LeadReviewTable } from "@/components/admin/lead-review-table";
+import { AutoClassifyButton } from "@/components/admin/auto-classify-button";
+import { TodoTiles } from "@/components/leads/todo-tiles";
+import { AutoFilterForm } from "@/components/ui/auto-filter-form";
+import { Search } from "lucide-react";
 import { LeadMap } from "@/components/leads/lead-map";
 import { ViewToggle } from "@/components/leads/view-toggle";
 import { LEAD_STATUS_LABELS } from "@/lib/types";
@@ -30,9 +33,10 @@ export default async function AdminLeadsPage({
     period?: string;
     quality?: string;
     page?: string;
+    pool?: string;
   }>;
 }) {
-  const { niche, status, view, q, period, quality, page } = await searchParams;
+  const { niche, status, view, q, period, quality, page, pool } = await searchParams;
   const supabase = await createClient();
   const isMap = view === "map";
   const search = (q ?? "").trim();
@@ -89,6 +93,33 @@ export default async function AdminLeadsPage({
       .not("assigned_to", "is", null),
   ]);
 
+  // Pool tiles: what an admin scans this page for. "Kan ringes igjen" = open
+  // leads that were called, didn't end in a final outcome, and haven't been
+  // called in the last 2 days.
+  const OPEN = '("new","assigned","contacted","follow_up")';
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const twoDays = new Date(now);
+  twoDays.setDate(twoDays.getDate() - 2);
+  const twoDaysAgo = twoDays.toISOString();
+  const countOf = (build: (q: ReturnType<typeof base>) => ReturnType<typeof base>) => build(base());
+  function base() {
+    return supabase.from("leads").select("id", { count: "exact", head: true });
+  }
+  const [cAll, cCallback, cInterested, cOverdue, cUnassigned, cNoNiche] = await Promise.all([
+    countOf((q) => q),
+    countOf((q) =>
+      q
+        .filter("status", "in", OPEN)
+        .in("last_call_outcome", ["no_answer", "voicemail", "interested"])
+        .lte("last_call_at", twoDaysAgo)
+    ),
+    countOf((q) => q.filter("status", "in", OPEN).eq("last_call_outcome", "interested")),
+    countOf((q) => q.filter("status", "in", OPEN).lte("next_follow_up_at", nowIso)),
+    countOf((q) => q.is("assigned_to", null).filter("status", "in", OPEN)),
+    countOf((q) => q.is("niche_id", null)),
+  ]);
+
   const workload: Record<string, number> = {};
   for (const row of (openLeads as { assigned_to: string | null }[] | null) ?? []) {
     if (row.assigned_to) workload[row.assigned_to] = (workload[row.assigned_to] ?? 0) + 1;
@@ -97,7 +128,23 @@ export default async function AdminLeadsPage({
   let query = supabase
     .from("leads")
     .select("*, niche:niches(*)", { count: "exact" })
-    .order("created_at", { ascending: false });
+    // Callback lists read oldest-call-first (longest waiting at the top).
+    .order(pool === "callback" ? "last_call_at" : "created_at", { ascending: pool === "callback" });
+
+  if (pool === "callback") {
+    query = query
+      .filter("status", "in", OPEN)
+      .in("last_call_outcome", ["no_answer", "voicemail", "interested"])
+      .lte("last_call_at", twoDaysAgo);
+  } else if (pool === "interested") {
+    query = query.filter("status", "in", OPEN).eq("last_call_outcome", "interested");
+  } else if (pool === "overdue") {
+    query = query.filter("status", "in", OPEN).lte("next_follow_up_at", nowIso);
+  } else if (pool === "unassigned") {
+    query = query.is("assigned_to", null).filter("status", "in", OPEN);
+  } else if (pool === "no_niche") {
+    query = query.is("niche_id", null);
+  }
 
   if (niche === "unclassified") query = query.is("niche_id", null);
   else if (niche) query = query.eq("niche_id", niche);
@@ -121,6 +168,7 @@ export default async function AdminLeadsPage({
 
   const pageHref = (p: number) => {
     const params = new URLSearchParams();
+    if (pool) params.set("pool", pool);
     if (niche) params.set("niche", niche);
     if (status) params.set("status", status);
     if (q) params.set("q", q);
@@ -131,17 +179,38 @@ export default async function AdminLeadsPage({
     return qs ? `/admin/leads?${qs}` : "/admin/leads";
   };
 
+  const poolHref = (key?: string) => {
+    const params = new URLSearchParams();
+    if (key) params.set("pool", key);
+    if (view) params.set("view", view);
+    const qs = params.toString();
+    return qs ? `/admin/leads?${qs}` : "/admin/leads";
+  };
+
   return (
     <>
+      <TodoTiles
+        active={pool ?? null}
+        tiles={[
+          { key: null, label: "Alle leads", hint: "i systemet", count: cAll.count ?? 0, href: poolHref() },
+          { key: "callback", label: "Kan ringes igjen", hint: "ringt før, ikke avsluttet", count: cCallback.count ?? 0, href: poolHref("callback") },
+          { key: "interested", label: "Interessert", hint: "varme leads", count: cInterested.count ?? 0, href: poolHref("interested") },
+          { key: "overdue", label: "Forfalt", hint: "oppfølging over frist", count: cOverdue.count ?? 0, href: poolHref("overdue"), urgent: true },
+          { key: "unassigned", label: "Ikke tildelt", hint: "åpne leads i poolen", count: cUnassigned.count ?? 0, href: poolHref("unassigned") },
+          { key: "no_niche", label: "Mangler nisje", hint: "må sorteres", count: cNoNiche.count ?? 0, href: poolHref("no_niche") },
+        ]}
+      />
+
       <LeadTools
         apollo={<FetchApolloPanel niches={(niches as Niche[] | null) ?? []} />}
         csv={<ImportLeadsPanel />}
         enrich={<EnrichBatchPanel missingAll={missingAll ?? 0} missingAssigned={missingAssigned ?? 0} />}
         actions={
           <>
+            <AutoClassifyButton />
             <ViewToggle
               basePath="/admin/leads"
-              params={{ niche, status, q, period, quality }}
+              params={{ pool, niche, status, q, period, quality }}
               active={isMap ? "map" : "list"}
             />
             <TriggerAssignmentButton />
@@ -149,68 +218,38 @@ export default async function AdminLeadsPage({
         }
       />
 
-      <Card>
-        <CardContent className="pt-5">
-          <form method="get" className="flex flex-wrap items-end gap-3">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted">Søk</label>
-              <Input
-                name="q"
-                defaultValue={q ?? ""}
-                placeholder="Firma, kontakt eller e-post…"
-                className="w-60"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted">Niche</label>
-              <Select name="niche" defaultValue={niche ?? ""} className="w-48">
-                <option value="">Alle</option>
-                <option value="unclassified">Ikke klassifisert</option>
-                {(niches as Niche[] | null)?.map((n) => (
-                  <option key={n.id} value={n.id}>
-                    {n.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted">
-                Status
-              </label>
-              <Select
-                name="status"
-                defaultValue={status ?? ""}
-                className="w-44"
-              >
-                <option value="">Alle</option>
-                {Object.entries(LEAD_STATUS_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted">Periode</label>
-              <Select name="period" defaultValue={period ?? ""} className="w-40">
-                <option value="">Hele tiden</option>
-                <option value="today">Nye i dag</option>
-                <option value="week">Siste 7 dager</option>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted">Kvalitet</label>
-              <Select name="quality" defaultValue={quality ?? ""} className="w-40">
-                <option value="">Alle</option>
-                <option value="phone">Kun med telefon</option>
-              </Select>
-            </div>
-            <Button type="submit" variant="outline">
-              Filtrer
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      <AutoFilterForm hidden={{ pool, view }}>
+        <div className="relative w-full sm:w-60">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" />
+          <Input name="q" aria-label="Søk" defaultValue={q ?? ""} placeholder="Søk firma, kontakt, e-post…" className="pl-9" />
+        </div>
+        <Select name="niche" aria-label="Nisje" defaultValue={niche ?? ""} className="w-auto">
+          <option value="">Alle nisjer</option>
+          <option value="unclassified">Uten nisje</option>
+          {(niches as Niche[] | null)?.map((n) => (
+            <option key={n.id} value={n.id}>
+              {n.name}
+            </option>
+          ))}
+        </Select>
+        <Select name="status" aria-label="Status" defaultValue={status ?? ""} className="w-auto">
+          <option value="">Alle statuser</option>
+          {Object.entries(LEAD_STATUS_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </Select>
+        <Select name="period" aria-label="Periode" defaultValue={period ?? ""} className="w-auto">
+          <option value="">Hele tiden</option>
+          <option value="today">Nye i dag</option>
+          <option value="week">Siste 7 dager</option>
+        </Select>
+        <Select name="quality" aria-label="Kvalitet" defaultValue={quality ?? ""} className="w-auto">
+          <option value="">Med/uten tlf.</option>
+          <option value="phone">Kun med telefon</option>
+        </Select>
+      </AutoFilterForm>
 
       {isMap ? (
         <LeadMap
@@ -219,7 +258,7 @@ export default async function AdminLeadsPage({
         />
       ) : (
         <>
-          <BulkAssignLeadsTable
+          <LeadReviewTable
             leads={(leads as Lead[]) ?? []}
             niches={(niches as Niche[]) ?? []}
             sellers={(sellers as Pick<Profile, "id" | "full_name" | "email" | "role">[]) ?? []}

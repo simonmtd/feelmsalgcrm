@@ -68,6 +68,8 @@ export interface Lead {
   country: string | null;
   employee_count: number | null;
   email_status: string | null;
+  last_call_outcome: CallOutcomeKey | null;
+  last_call_at: string | null;
   duplicate_of: string | null;
   raw_hubspot_data: Record<string, unknown> | null;
   created_at: string;

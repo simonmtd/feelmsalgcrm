@@ -207,7 +207,13 @@ export async function logCallOutcome(leadId: string, outcome: CallOutcome, note?
   const admin = createAdminClient();
   const { error } = await admin
     .from("leads")
-    .update({ status: cfg.status, next_follow_up_at, follow_up_reminded_at: null })
+    .update({
+      status: cfg.status,
+      next_follow_up_at,
+      follow_up_reminded_at: null,
+      last_call_outcome: outcome,
+      last_call_at: new Date().toISOString(),
+    })
     .eq("id", leadId);
   if (error) throwSafe("logCallOutcome", error);
 

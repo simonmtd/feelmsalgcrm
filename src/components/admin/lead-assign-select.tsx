@@ -9,7 +9,10 @@ export function LeadAssignSelect({
   leadId,
   assignedTo,
   sellers,
+  className = "w-40",
 }: {
+  /** Overrides the default field look, e.g. a quiet in-table style. */
+  className?: string;
   leadId: string;
   assignedTo: string | null;
   sellers: Pick<Profile, "id" | "full_name" | "email">[];
@@ -18,7 +21,7 @@ export function LeadAssignSelect({
 
   return (
     <Select
-      className="w-40"
+      className={className}
       defaultValue={assignedTo ?? ""}
       disabled={isPending}
       onChange={(e) => {

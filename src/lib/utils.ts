@@ -58,3 +58,14 @@ export function formatPhoneParts(raw: string | null | undefined): { prefix: stri
     : `${digits.slice(0, 2)} ${digits.slice(2, 4)} ${digits.slice(4, 6)} ${digits.slice(6)}`;
   return { prefix, number };
 }
+
+/** "i dag", "i går", "3 d", "5 uker", "4 mnd" – compact age for tables. */
+export function relativeAge(iso: string | null | undefined, now: number): string {
+  if (!iso) return "–";
+  const days = Math.floor((now - new Date(iso).getTime()) / 86_400_000);
+  if (days <= 0) return "i dag";
+  if (days === 1) return "i går";
+  if (days < 14) return `${days} d`;
+  if (days < 60) return `${Math.round(days / 7)} uker`;
+  return `${Math.round(days / 30)} mnd`;
+}
