@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { LeadMap } from "@/components/leads/lead-map";
 import { ViewToggle } from "@/components/leads/view-toggle";
+import { LeadBoard } from "@/components/leads/lead-board";
 import { NewLeadForm } from "@/components/leads/new-lead-form";
 import { LogCallForm } from "@/components/leads/log-call-form";
 import Link from "next/link";
@@ -46,6 +47,7 @@ export default async function LeadsPage({
   const supabase = await createClient();
   const isAdmin = profile.role === "admin";
   const isMap = view === "map";
+  const isBoard = view === "board";
   const search = (q ?? "").trim().toLowerCase();
 
   let query = supabase
@@ -123,20 +125,30 @@ export default async function LeadsPage({
     : { data: null };
   const sellers = (sellersData as Pick<Profile, "id" | "full_name" | "email">[] | null) ?? [];
 
+  // Chips keep the current view (list/board/map) when switching filter.
+  const todoHref = (t?: string) => {
+    const qs = new URLSearchParams();
+    if (t) qs.set("todo", t);
+    if (view) qs.set("view", view);
+    const str = qs.toString();
+    return str ? `/leads?${str}` : "/leads";
+  };
+
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-1.5">
-          <TodoChip label="Alle" href="/leads" active={!todo} />
-          <TodoChip label="Ikke kontaktet" href="/leads?todo=uncontacted" active={todo === "uncontacted"} />
-          <TodoChip label="Ikke svar" href="/leads?todo=no_answer" active={todo === "no_answer"} />
-          <TodoChip label="Forfalt oppfølging" href="/leads?todo=overdue" active={todo === "overdue"} />
-          <TodoChip label="Glemt (3d+)" href="/leads?todo=stale" active={todo === "stale"} />
+          <TodoChip label="Alle" href={todoHref()} active={!todo} />
+          <TodoChip label="Ikke kontaktet" href={todoHref("uncontacted")} active={todo === "uncontacted"} />
+          <TodoChip label="Ikke svar" href={todoHref("no_answer")} active={todo === "no_answer"} />
+          <TodoChip label="Forfalt oppfølging" href={todoHref("overdue")} active={todo === "overdue"} />
+          <TodoChip label="Glemt (3d+)" href={todoHref("stale")} active={todo === "stale"} />
         </div>
         <ViewToggle
           basePath="/leads"
           params={{ status, filming, todo, quality, q }}
-          active={isMap ? "map" : "list"}
+          active={isMap ? "map" : isBoard ? "board" : "list"}
+          withBoard
         />
       </div>
 
@@ -151,6 +163,7 @@ export default async function LeadsPage({
         <CardContent className="pt-5">
           <form method="get" className="flex flex-wrap items-end gap-3">
             {todo && <input type="hidden" name="todo" value={todo} />}
+            {view && <input type="hidden" name="view" value={view} />}
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="lead-search" className="text-xs text-muted">
                 Søk
@@ -209,6 +222,8 @@ export default async function LeadsPage({
         </Card>
       ) : isMap ? (
         <LeadMap leads={leads as Lead[]} niches={(niches as Niche[]) ?? []} />
+      ) : isBoard ? (
+        <LeadBoard leads={leads as Lead[]} />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {(leads as Lead[]).map((lead) => (
