@@ -60,13 +60,11 @@ export async function applyTodoFilter(
 
 /**
  * Call-queue order: overdue follow-ups first (oldest first), then never-called
- * leads (oldest assignment first), then follow-ups due today. Only open leads
- * with a phone number; follow-ups scheduled after today are left alone.
+ * leads (oldest assignment first). Only open leads with a phone number; a lead
+ * with a follow-up joins the queue once that time has come.
  */
 export function callQueue(leads: Lead[]): Lead[] {
-  const endOfToday = new Date();
-  endOfToday.setHours(23, 59, 59, 999);
-  const now = Date.now();
+  const now = new Date().getTime();
 
   const rank = (l: Lead): [number, number] => {
     const fu = l.next_follow_up_at ? new Date(l.next_follow_up_at).getTime() : null;
@@ -79,7 +77,8 @@ export function callQueue(leads: Lead[]): Lead[] {
 
   return leads
     .filter((l) => OPEN.includes(l.status) && !!l.phone)
-    .filter((l) => !l.next_follow_up_at || new Date(l.next_follow_up_at).getTime() <= endOfToday.getTime())
+    // A follow-up set for a time (e.g. «ring etter kl. 14») only joins the queue once it's due.
+    .filter((l) => !l.next_follow_up_at || new Date(l.next_follow_up_at).getTime() <= now)
     .sort((a, b) => {
       const [ra, ta] = rank(a);
       const [rb, tb] = rank(b);

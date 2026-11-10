@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PixelProgress } from "@/components/charts/pixel-progress";
+import { FollowUpPicker } from "@/components/leads/follow-up-picker";
 import { COMMISSION_PER_MEETING } from "@/lib/commission";
 import { cn, formatCurrency, formatPhoneParts } from "@/lib/utils";
 import type { Lead } from "@/lib/types";
@@ -159,6 +160,8 @@ export function CallMode({
   const [now] = useState(() => Date.now());
   const [index, setIndex] = useState(0);
   const [note, setNote] = useState("");
+  // undefined = the outcome's own rule (e.g. «Ikke svar» → next morning).
+  const [followUp, setFollowUp] = useState<string | null | undefined>(undefined);
   const [copied, setCopied] = useState(false);
   const [booking, setBooking] = useState<{ note: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -182,6 +185,7 @@ export function CallMode({
 
   const next = useCallback(() => {
     setNote("");
+    setFollowUp(undefined);
     setCopied(false);
     setBooking(null);
     setError(null);
@@ -192,10 +196,11 @@ export function CallMode({
     (outcome: CallOutcome) => {
       if (!lead || isPending || booking) return;
       const text = note;
+      const when = followUp;
       setError(null);
       startTransition(async () => {
         try {
-          await logCallOutcome(lead.id, outcome, text);
+          await logCallOutcome(lead.id, outcome, text, when);
           setStats((s) => ({ ...s, [outcome]: s[outcome] + 1 }));
           if (outcome === "meeting_booked") setBooking({ note: text });
           else next();
@@ -204,7 +209,7 @@ export function CallMode({
         }
       });
     },
-    [lead, isPending, booking, note, next]
+    [lead, isPending, booking, note, followUp, next]
   );
 
   const skip = useCallback(() => {
@@ -356,6 +361,13 @@ export function CallMode({
                         </button>
                       ))}
                     </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <p className="eyebrow">Ring igjen</p>
+                    <FollowUpPicker value={followUp} onChange={setFollowUp} allowAuto />
+                    <p className="text-xs text-subtle">
+                      Gjelder Ikke svar, Beskjed og Interessert. «Automatisk» = neste morgen etter ikke svar, ellers om 2 virkedager.
+                    </p>
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <Label htmlFor="call-note">Notat fra samtalen (valgfritt)</Label>
