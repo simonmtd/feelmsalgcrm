@@ -1,4 +1,5 @@
 import { requireProfile } from "@/lib/dal";
+import { fetchAll } from "@/lib/fetch-all";
 import { createClient } from "@/lib/supabase/server";
 import { applyTodoFilter, callQueue } from "@/lib/lead-filters";
 import { CallMode, type CallActivity } from "@/components/call-mode/call-mode";
@@ -18,11 +19,9 @@ export default async function CallModePage({
   const { todo, start, from } = await searchParams;
   const supabase = await createClient();
 
-  const { data } = await supabase
-    .from("leads")
-    .select("*, niche:niches(*)")
-    .eq("assigned_to", profile.id);
-  const mine = (data as Lead[] | null) ?? [];
+  const mine = await fetchAll<Lead>((from, to) =>
+    supabase.from("leads").select("*, niche:niches(*)").eq("assigned_to", profile.id).order("id").range(from, to)
+  );
 
   let queue = callQueue(await applyTodoFilter(supabase, profile.id, mine, todo));
   if (start) {

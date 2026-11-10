@@ -1,4 +1,5 @@
 import "server-only";
+import { fetchAll } from "@/lib/fetch-all";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { searchApolloPeople } from "@/lib/apollo";
 import { verifyNorwegianCompany, type BrregMatch } from "@/lib/brreg";
@@ -101,9 +102,9 @@ export async function runApolloLeadFetch(
   // Existing leads: Apollo ids (so we never import the same person twice) and
   // company+role signatures (so we don't re-import someone we already have from
   // HubSpot or an earlier run, even though the Apollo search masks their name).
-  const { data: existingData } = await supabase
-    .from("leads")
-    .select("apollo_person_id, company_name, job_title");
+  const existingData = await fetchAll((from, to) =>
+    supabase.from("leads").select("apollo_person_id, company_name, job_title").order("id").range(from, to)
+  );
   const seen = new Set<string>();
   const sigSeen = new Set<string>();
   // How many leads we already have per company, so a run tops each company up to

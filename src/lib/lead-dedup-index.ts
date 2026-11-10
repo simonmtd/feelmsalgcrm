@@ -1,4 +1,5 @@
 import "server-only";
+import { fetchAll } from "@/lib/fetch-all";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import { normEmail, companyTitleKey, companyContactKey, mobileKey, normCompany } from "@/lib/dedup";
 
@@ -62,9 +63,13 @@ export class LeadDedupIndex {
 export async function loadLeadDedupIndex(
   admin: ReturnType<typeof createAdminClient>
 ): Promise<LeadDedupIndex> {
-  const { data } = await admin
-    .from("leads")
-    .select("id, apollo_person_id, email, company_name, contact_name, job_title, phone");
+  const data = await fetchAll((from, to) =>
+    admin
+      .from("leads")
+      .select("id, apollo_person_id, email, company_name, contact_name, job_title, phone")
+      .order("id")
+      .range(from, to)
+  );
   const index = new LeadDedupIndex();
   for (const r of (data as {
     id: string;
@@ -94,10 +99,9 @@ export async function loadLeadDedupIndex(
 export async function loadCalledCompanies(
   admin: ReturnType<typeof createAdminClient>
 ): Promise<Set<string>> {
-  const { data: calls } = await admin
-    .from("call_logs")
-    .select("company_name")
-    .not("company_name", "is", null);
+  const calls = await fetchAll((from, to) =>
+    admin.from("call_logs").select("company_name").not("company_name", "is", null).order("id").range(from, to)
+  );
   const called = new Set<string>();
   for (const c of (calls as { company_name: string | null }[] | null) ?? []) {
     const k = normCompany(c.company_name);

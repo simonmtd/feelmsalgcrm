@@ -1,4 +1,5 @@
 import "server-only";
+import { fetchAll } from "@/lib/fetch-all";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notify } from "@/lib/notifications";
 import { sendEmail } from "@/lib/email";
@@ -24,13 +25,17 @@ export async function runFollowUpReminders(): Promise<ReminderResult> {
   const supabase = createAdminClient();
   const nowIso = new Date().toISOString();
 
-  const { data: leadsData } = await supabase
-    .from("leads")
-    .select("*, niche:niches(*)")
-    .not("assigned_to", "is", null)
-    .not("next_follow_up_at", "is", null)
-    .lte("next_follow_up_at", nowIso)
-    .in("status", OPEN_STATUSES);
+  const leadsData = await fetchAll((from, to) =>
+    supabase
+      .from("leads")
+      .select("*, niche:niches(*)")
+      .not("assigned_to", "is", null)
+      .not("next_follow_up_at", "is", null)
+      .lte("next_follow_up_at", nowIso)
+      .in("status", OPEN_STATUSES)
+      .order("id")
+      .range(from, to)
+  );
 
   const due = ((leadsData as Lead[] | null) ?? []).filter(
     (l) => !l.follow_up_reminded_at || l.follow_up_reminded_at < (l.next_follow_up_at ?? "")

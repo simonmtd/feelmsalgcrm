@@ -1,3 +1,4 @@
+import { fetchAll } from "@/lib/fetch-all";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
@@ -19,9 +20,11 @@ interface SellerStat {
 export default async function AdminStatsPage() {
   const supabase = await createClient();
 
-  const [{ data: sellersData }, { data: leadsData }] = await Promise.all([
+  const [{ data: sellersData }, leadsData] = await Promise.all([
     supabase.from("profiles").select("id, full_name, email").order("full_name"),
-    supabase.from("leads").select("assigned_to, status, deal_size"),
+    fetchAll((from, to) =>
+      supabase.from("leads").select("assigned_to, status, deal_size").not("assigned_to", "is", null).order("id").range(from, to)
+    ),
   ]);
 
   const leads = (leadsData as Pick<Lead, "assigned_to" | "status" | "deal_size">[] | null) ?? [];

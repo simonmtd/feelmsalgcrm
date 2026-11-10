@@ -1,4 +1,5 @@
 import "server-only";
+import { fetchAll } from "@/lib/fetch-all";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { createAdminClient } from "@/lib/supabase/admin";
@@ -307,10 +308,13 @@ export async function lookupLeads(
 ): Promise<LeadLookupMatch[]> {
   // Filtered in JS (same full-table read the dedup does) so stored values in
   // any shape — mixed-case emails, "https://www.x.no/" websites — match.
-  const { data, error } = await admin
-    .from("leads")
-    .select("id, company_name, contact_name, email, website, status, source, assigned_to, created_at");
-  if (error) throw error;
+  const data = await fetchAll((from, to) =>
+    admin
+      .from("leads")
+      .select("id, company_name, contact_name, email, website, status, source, assigned_to, created_at")
+      .order("id")
+      .range(from, to)
+  );
   type Row = Omit<LeadLookupMatch, "assigned_to"> & { email: string | null; website: string | null; assigned_to: string | null };
 
   const matches = ((data as Row[] | null) ?? []).filter((r) => {

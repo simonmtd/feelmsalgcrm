@@ -1,4 +1,5 @@
 import { requireProfile } from "@/lib/dal";
+import { fetchAll } from "@/lib/fetch-all";
 import { createClient } from "@/lib/supabase/server";
 import { LeadCard } from "@/components/lead-card";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,12 +33,15 @@ export default async function LeadsPage({
 
   // All of the seller's leads once: the tiles count over this, the list
   // narrows it with the dropdown filters, the todo filter and the search.
-  const { data: leadsRaw } = await supabase
-    .from("leads")
-    .select("*, niche:niches(*)")
-    .eq("assigned_to", profile.id)
-    .order("updated_at", { ascending: false });
-  const mine = (leadsRaw as Lead[] | null) ?? [];
+  const mine = await fetchAll<Lead>((from, to) =>
+    supabase
+      .from("leads")
+      .select("*, niche:niches(*)")
+      .eq("assigned_to", profile.id)
+      .order("updated_at", { ascending: false })
+      .order("id")
+      .range(from, to)
+  );
 
   const todoKeys = ["uncontacted", "no_answer", "overdue", "stale"] as const;
   const todoCounts = Object.fromEntries(

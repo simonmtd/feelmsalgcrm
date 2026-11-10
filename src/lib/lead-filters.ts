@@ -1,4 +1,5 @@
 import "server-only";
+import { fetchAll } from "@/lib/fetch-all";
 import type { createClient } from "@/lib/supabase/server";
 import type { Lead } from "@/lib/types";
 
@@ -39,12 +40,15 @@ export async function applyTodoFilter(
     // Leads to ring back: the most recent registered call was "ikke svar" and
     // the lead is still open. Latest outcome wins, so a later successful call
     // takes it off the list.
-    const { data: calls } = await supabase
-      .from("call_logs")
-      .select("lead_id, outcome, created_at")
-      .eq("seller_id", sellerId)
-      .not("lead_id", "is", null)
-      .order("created_at", { ascending: false });
+    const calls = await fetchAll((from, to) =>
+      supabase
+        .from("call_logs")
+        .select("lead_id, outcome, created_at")
+        .eq("seller_id", sellerId)
+        .not("lead_id", "is", null)
+        .order("created_at", { ascending: false })
+        .range(from, to)
+    );
     const latestOutcome = new Map<string, string | null>();
     for (const c of (calls as { lead_id: string | null; outcome: string | null }[] | null) ?? []) {
       if (c.lead_id && !latestOutcome.has(c.lead_id)) latestOutcome.set(c.lead_id, c.outcome);

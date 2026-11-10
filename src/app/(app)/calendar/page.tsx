@@ -1,4 +1,5 @@
 import { requireProfile } from "@/lib/dal";
+import { fetchAll } from "@/lib/fetch-all";
 import { createClient } from "@/lib/supabase/server";
 import { TeamCalendar } from "@/components/calendar/team-calendar";
 import type { Lead, Meeting, Profile } from "@/lib/types";
@@ -21,12 +22,16 @@ export default async function CalendarPage() {
 
   // The "new meeting" form lets you attach a customer — sellers pick from their
   // own leads, an admin from everyone's.
-  let leadsQuery = supabase
-    .from("leads")
-    .select("id, company_name, contact_name")
-    .order("company_name", { ascending: true });
-  if (!isAdmin) leadsQuery = leadsQuery.eq("assigned_to", profile.id);
-  const { data: leads } = await leadsQuery;
+  const leadOptions = fetchAll<Pick<Lead, "id" | "company_name" | "contact_name">>((from, to) => {
+    let q = supabase
+      .from("leads")
+      .select("id, company_name, contact_name")
+      .order("company_name", { ascending: true })
+      .order("id");
+    if (!isAdmin) q = q.eq("assigned_to", profile.id);
+    return q.range(from, to);
+  });
+  const leads = await leadOptions;
 
   return (
     <TeamCalendar

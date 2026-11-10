@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { fetchAll } from "@/lib/fetch-all";
 import { createClient } from "@/lib/supabase/server";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -62,7 +63,7 @@ export default async function AdminLeadsPage({
   const [
     { data: niches },
     { data: sellers },
-    { data: openLeads },
+    openLeads,
     { count: missingAll },
     { count: missingAssigned },
   ] = await Promise.all([
@@ -74,11 +75,15 @@ export default async function AdminLeadsPage({
       .eq("is_active", true)
       .order("full_name"),
     // Current workload per assignee: open (not won/lost) assigned leads.
-    supabase
-      .from("leads")
-      .select("assigned_to")
-      .not("assigned_to", "is", null)
-      .not("status", "in", '("won","lost")'),
+    fetchAll<{ assigned_to: string | null }>((from, to) =>
+      supabase
+        .from("leads")
+        .select("assigned_to")
+        .not("assigned_to", "is", null)
+        .not("status", "in", '("won","lost")')
+        .order("id")
+        .range(from, to)
+    ),
     // Leads missing a phone that we can still enrich (have a name or Apollo id).
     supabase
       .from("leads")
@@ -121,7 +126,7 @@ export default async function AdminLeadsPage({
   ]);
 
   const workload: Record<string, number> = {};
-  for (const row of (openLeads as { assigned_to: string | null }[] | null) ?? []) {
+  for (const row of openLeads) {
     if (row.assigned_to) workload[row.assigned_to] = (workload[row.assigned_to] ?? 0) + 1;
   }
 

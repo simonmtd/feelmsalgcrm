@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { fetchAll } from "@/lib/fetch-all";
 import { Users, CalendarPlus, Wallet, Trophy, ArrowUpRight, Filter } from "lucide-react";
 import { requireProfile } from "@/lib/dal";
 import { createClient } from "@/lib/supabase/server";
@@ -38,8 +39,10 @@ export default async function DashboardPage() {
   // see it (meetings are team-visible), so it renders for admins and sellers.
   const callsSince = new Date();
   callsSince.setDate(callsSince.getDate() - 366);
-  const [{ data: allMeetings }, { data: teamRows }, { data: callLogsData }] = await Promise.all([
-    supabase.from("meetings").select("seller_id, deal_size, signed, signed_at, type, created_at"),
+  const [allMeetings, { data: teamRows }, callLogsData] = await Promise.all([
+    fetchAll((from, to) =>
+      supabase.from("meetings").select("seller_id, deal_size, signed, signed_at, type, created_at").order("id").range(from, to)
+    ),
     // All active team members, incl. admins who also sell (e.g. Tobias). We keep
     // sellers always, and admins only when they've actually booked a meeting, so
     // pure-admin accounts don't clutter the board.
@@ -49,10 +52,14 @@ export default async function DashboardPage() {
       .eq("is_active", true),
     // Call activity for the stats (bounded to a year so a year average works).
     // Returns [] if the call_logs table isn't set up yet, so the page won't break.
-    supabase
-      .from("call_logs")
-      .select("seller_id, created_at")
-      .gte("created_at", callsSince.toISOString()),
+    fetchAll((from, to) =>
+      supabase
+        .from("call_logs")
+        .select("seller_id, created_at")
+        .gte("created_at", callsSince.toISOString())
+        .order("id")
+        .range(from, to)
+    ).catch(() => []),
   ]);
   const meetingRows =
     (allMeetings as {
@@ -104,16 +111,19 @@ export default async function DashboardPage() {
   let recentLeads: Lead[];
 
   if (isAdmin) {
-    const { data: allLeads } = await supabase.from("leads").select("*");
-    scopedLeads = (allLeads as Lead[] | null) ?? [];
-    recentLeads = [...scopedLeads]
-      .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
-      .slice(0, 6);
-    const nicheById = new Map((niches ?? []).map((n) => [n.id, n]));
-    recentLeads = recentLeads.map((l) => ({ ...l, niche: l.niche_id ? nicheById.get(l.niche_id) ?? null : null }));
+    // Stats need only a few columns, but over *every* lead (paged past the 1000-row cap).
+    const [allLeads, { data: newest }] = await Promise.all([
+      fetchAll<Lead>((from, to) =>
+        supabase.from("leads").select("id, status, deal_size, created_at").order("id").range(from, to)
+      ),
+      supabase.from("leads").select("*, niche:niches(*)").order("created_at", { ascending: false }).limit(6),
+    ]);
+    scopedLeads = allLeads;
+    recentLeads = (newest as Lead[] | null) ?? [];
   } else {
-    const { data: myLeadsRaw } = await supabase.from("leads").select("*").eq("assigned_to", profile.id);
-    scopedLeads = (myLeadsRaw as Lead[] | null) ?? [];
+    scopedLeads = await fetchAll<Lead>((from, to) =>
+      supabase.from("leads").select("*").eq("assigned_to", profile.id).order("id").range(from, to)
+    );
 
     const today = new Date().toISOString().slice(0, 10);
     const { data: todaysLeads } = await supabase

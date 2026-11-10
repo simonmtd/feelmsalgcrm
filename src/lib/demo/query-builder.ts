@@ -188,7 +188,9 @@ export class MockQueryBuilder implements PromiseLike<{ data: unknown; error: nul
     return this;
   }
 
+  /** Only the primary sort key is emulated; later `.order()` calls are tie-breakers. */
   order(col: string, opts?: { ascending?: boolean }) {
+    if (this.orderCol) return this;
     this.orderCol = col;
     this.orderAsc = opts?.ascending ?? true;
     return this;
