@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/dal";
+import { requireAdmin, requireProfile } from "@/lib/dal";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { safeError } from "@/lib/actions/errors";
 import { logAudit } from "@/lib/audit";
@@ -112,9 +112,9 @@ export interface LeadPreview {
   activities: { id: string; type: string; content: string; created_at: string; seller: string | null }[];
 }
 
-/** Everything the side panel on /admin/leads shows for one lead. */
+/** Everything the lead side panel shows. Admins see any lead; sellers only their own. */
 export async function getLeadPreview(leadId: string): Promise<LeadPreview | null> {
-  await requireAdmin();
+  const profile = await requireProfile();
   const admin = createAdminClient();
 
   const [{ data: lead }, { data: acts }] = await Promise.all([
@@ -133,6 +133,7 @@ export async function getLeadPreview(leadId: string): Promise<LeadPreview | null
   if (!lead) return null;
 
   const l = lead as Lead;
+  if (profile.role !== "admin" && l.assigned_to !== profile.id) return null;
   return {
     lead: l,
     sellerName: l.assigned_seller ? l.assigned_seller.full_name ?? l.assigned_seller.email : null,

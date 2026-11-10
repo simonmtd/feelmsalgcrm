@@ -1,7 +1,7 @@
 import { requireProfile } from "@/lib/dal";
 import { fetchAll } from "@/lib/fetch-all";
 import { createClient } from "@/lib/supabase/server";
-import { LeadCard } from "@/components/lead-card";
+import { MyLeadsTable } from "@/components/leads/my-leads-table";
 import { Card, CardContent } from "@/components/ui/card";
 import { LeadMap } from "@/components/leads/lead-map";
 import { ViewToggle } from "@/components/leads/view-toggle";
@@ -9,7 +9,7 @@ import { LeadBoard } from "@/components/leads/lead-board";
 import { applyTodoFilter, callQueue } from "@/lib/lead-filters";
 import { TodoTiles } from "@/components/leads/todo-tiles";
 import { LeadsToolbar } from "@/components/leads/leads-toolbar";
-import type { Lead, LeadStatus, FilmingStatus, Niche, Profile } from "@/lib/types";
+import type { Lead, LeadStatus, FilmingStatus, Niche } from "@/lib/types";
 
 export default async function LeadsPage({
   searchParams,
@@ -26,7 +26,6 @@ export default async function LeadsPage({
   const profile = await requireProfile();
   const { status, filming, view, todo, quality, q } = await searchParams;
   const supabase = await createClient();
-  const isAdmin = profile.role === "admin";
   const isMap = view === "map";
   const isBoard = view === "board";
   const search = (q ?? "").trim().toLowerCase();
@@ -72,15 +71,6 @@ export default async function LeadsPage({
 
   const { data: niches } = await supabase.from("niches").select("*").order("name");
 
-  // Admins can hand their own leads over to a seller straight from the card.
-  const { data: sellersData } = isAdmin
-    ? await supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .eq("is_active", true)
-        .order("full_name")
-    : { data: null };
-  const sellers = (sellersData as Pick<Profile, "id" | "full_name" | "email">[] | null) ?? [];
 
   // Chips keep the current view (list/board/map) when switching filter.
   const todoHref = (t?: string) => {
@@ -134,11 +124,7 @@ export default async function LeadsPage({
       ) : isBoard ? (
         <LeadBoard leads={leads as Lead[]} />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {(leads as Lead[]).map((lead) => (
-            <LeadCard key={lead.id} lead={lead} sellers={isAdmin ? sellers : undefined} />
-          ))}
-        </div>
+        <MyLeadsTable leads={leads as Lead[]} ringBase={todo ? `/ring?todo=${todo}` : "/ring"} />
       )}
     </>
   );
