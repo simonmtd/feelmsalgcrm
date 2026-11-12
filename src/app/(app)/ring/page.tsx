@@ -36,9 +36,7 @@ export default async function CallModePage({
   );
 
   const mode = MODES.some((m) => m.key === todo) ? todo : undefined;
-  const queues = await Promise.all(
-    MODES.map(async (m) => callQueue(await applyTodoFilter(supabase, profile.id, mine, m.key ?? undefined)))
-  );
+  const queues = MODES.map((m) => callQueue(applyTodoFilter(mine, m.key ?? undefined)));
   let queue = queues[MODES.findIndex((m) => m.key === (mode ?? null))];
   const choices: CallModeChoice[] = MODES.map((m, i) => {
     const qs = new URLSearchParams();
@@ -58,14 +56,23 @@ export default async function CallModePage({
 
   // The last few notes/calls per lead, so the seller knows what was said before.
   const activities: Record<string, CallActivity[]> = {};
+  // Fetched in chunks: a big queue (2000+ ids) in one .in() overflows the URL
+  // (HTTP 414) and the history silently came back empty.
   if (queue.length) {
-    const { data: acts } = await supabase
-      .from("lead_activities")
-      .select("lead_id, content, type, created_at")
-      .in("lead_id", queue.map((l) => l.id))
-      .in("type", ["note", "call"])
-      .order("created_at", { ascending: false });
-    for (const a of (acts as (CallActivity & { lead_id: string })[] | null) ?? []) {
+    const ids = queue.map((l) => l.id);
+    const chunks = Array.from({ length: Math.ceil(ids.length / 150) }, (_, i) => ids.slice(i * 150, i * 150 + 150));
+    const results = await Promise.all(
+      chunks.map((chunk) =>
+        supabase
+          .from("lead_activities")
+          .select("lead_id, content, type, created_at")
+          .in("lead_id", chunk)
+          .in("type", ["note", "call"])
+          .order("created_at", { ascending: false })
+      )
+    );
+    const acts = results.flatMap((r) => (r.data as (CallActivity & { lead_id: string })[] | null) ?? []);
+    for (const a of acts) {
       const list = (activities[a.lead_id] ??= []);
       if (list.length < 3) list.push({ content: a.content, type: a.type, created_at: a.created_at });
     }

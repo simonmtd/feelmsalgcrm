@@ -1,10 +1,6 @@
 import "server-only";
-import { fetchAll } from "@/lib/fetch-all";
-import type { createClient } from "@/lib/supabase/server";
 import type { Lead } from "@/lib/types";
 import { hasCallablePhone } from "@/lib/utils";
-
-type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 export type TodoFilter = "uncontacted" | "overdue" | "stale" | "no_answer";
 
@@ -14,12 +10,7 @@ const OPEN = ["new", "assigned", "contacted", "follow_up"];
  * The "Å gjøre" filters on a seller's leads (so nothing falls between the
  * chairs). Shared by Mine leads and the call mode queue so both mean the same.
  */
-export async function applyTodoFilter(
-  supabase: Supabase,
-  sellerId: string,
-  leads: Lead[],
-  todo: string | undefined
-): Promise<Lead[]> {
+export function applyTodoFilter(leads: Lead[], todo: string | undefined): Lead[] {
   if (todo === "uncontacted") {
     // Never called: still new/assigned and no registered call on the lead.
     return leads.filter((l) => (l.status === "new" || l.status === "assigned") && !l.last_call_at);
@@ -39,23 +30,9 @@ export async function applyTodoFilter(
     );
   }
   if (todo === "no_answer") {
-    // Leads to ring back: the most recent registered call was "ikke svar" and
-    // the lead is still open. Latest outcome wins, so a later successful call
-    // takes it off the list.
-    const calls = await fetchAll((from, to) =>
-      supabase
-        .from("call_logs")
-        .select("lead_id, outcome, created_at")
-        .eq("seller_id", sellerId)
-        .not("lead_id", "is", null)
-        .order("created_at", { ascending: false })
-        .range(from, to)
-    );
-    const latestOutcome = new Map<string, string | null>();
-    for (const c of (calls as { lead_id: string | null; outcome: string | null }[] | null) ?? []) {
-      if (c.lead_id && !latestOutcome.has(c.lead_id)) latestOutcome.set(c.lead_id, c.outcome);
-    }
-    return leads.filter((l) => latestOutcome.get(l.id) === "no_answer" && l.status !== "won" && l.status !== "lost");
+    // Leads to ring back: the latest call on the lead (by anyone – so leads
+    // handed over from another seller come along) was "ikke svar", still open.
+    return leads.filter((l) => l.last_call_outcome === "no_answer" && l.status !== "won" && l.status !== "lost");
   }
   return leads;
 }

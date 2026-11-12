@@ -44,11 +44,9 @@ export default async function LeadsPage({
 
   const todoKeys = ["uncontacted", "no_answer", "overdue", "stale"] as const;
   const todoCounts = Object.fromEntries(
-    await Promise.all(
-      todoKeys.map(async (k) => [k, (await applyTodoFilter(supabase, profile.id, mine, k)).length] as const)
-    )
+    todoKeys.map((k) => [k, applyTodoFilter(mine, k).length] as const)
   ) as Record<(typeof todoKeys)[number], number>;
-  const queueCount = callQueue(await applyTodoFilter(supabase, profile.id, mine, todo)).length;
+  const queueCount = callQueue(applyTodoFilter(mine, todo)).length;
 
   let leads = mine.filter(
     (l) =>
@@ -58,7 +56,7 @@ export default async function LeadsPage({
   );
 
   // "Å gjøre"-filtre for å hindre at leads faller mellom stolene.
-  leads = await applyTodoFilter(supabase, profile.id, leads, todo);
+  leads = applyTodoFilter(leads, todo);
 
   // Free-text search across the fields a seller looks a lead up by.
   if (search) {
