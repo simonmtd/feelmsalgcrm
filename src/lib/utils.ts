@@ -35,6 +35,17 @@ export function formatDateTime(value: string | null | undefined) {
 }
 
 /**
+ * True when the lead has a number you can actually dial: at least 8 digits
+ * (a Norwegian number) and no more than 15 (the E.164 max). Filters out empty
+ * strings, "-", "ukjent" and half-typed numbers so call mode never shows a
+ * lead without a usable number.
+ */
+export function hasCallablePhone(raw: string | null | undefined): boolean {
+  const digits = (raw ?? "").replace(/\D/g, "").length;
+  return digits >= 8 && digits <= 15;
+}
+
+/**
  * A phone number split into an optional country prefix and digits grouped the
  * Norwegian way ("920 27 788"), for reading off the screen while dialling.
  */

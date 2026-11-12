@@ -37,6 +37,50 @@ export interface CallActivity {
   created_at: string;
 }
 
+/** One of the queues the seller can switch to at the top of call mode. */
+export interface CallModeChoice {
+  key: string | null;
+  label: string;
+  count: number;
+  href: string;
+}
+
+/** «Hvem vil du ringe?» – pick the queue: everyone due, only never-contacted, … */
+function ModePicker({ modes, active }: { modes: CallModeChoice[]; active: string | null }) {
+  if (!modes.length) return null;
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="eyebrow">Hvem vil du ringe?</p>
+      <div className="flex flex-wrap gap-2">
+        {modes.map((m) => {
+          const isActive = m.key === active;
+          return (
+            <Link
+              key={m.label}
+              href={m.href}
+              replace
+              aria-current={isActive ? "page" : undefined}
+              className={cn(
+                "flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors",
+                isActive
+                  ? "border-brand/50 bg-brand-soft text-brand"
+                  : "border-line bg-surface text-muted hover:border-line-strong hover:text-fg",
+                m.count === 0 && !isActive && "opacity-60"
+              )}
+            >
+              {m.label}
+              <span className={cn("rounded-md px-1.5 text-xs", isActive ? "bg-brand/15" : "bg-surface-3 text-fg-2")}>
+                {m.count}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+      <p className="text-xs text-subtle">Kun leads med gyldig telefonnummer er med i køen.</p>
+    </div>
+  );
+}
+
 const OUTCOMES: { key: CallOutcome; label: string; icon: LucideIcon; tone: string }[] = [
   { key: "no_answer", label: "Ikke svar", icon: PhoneOff, tone: "hover:border-line-strong" },
   { key: "voicemail", label: "La igjen beskjed", icon: Voicemail, tone: "hover:border-info/60 hover:text-info" },
@@ -150,10 +194,14 @@ export function CallMode({
   queue: initialQueue,
   activities,
   backHref,
+  modes = [],
+  activeMode = null,
 }: {
   queue: Lead[];
   activities: Record<string, CallActivity[]>;
   backHref: string;
+  modes?: CallModeChoice[];
+  activeMode?: string | null;
 }) {
   const [queue] = useState(initialQueue);
   // Captured once so render stays pure; minute precision is plenty here.
@@ -249,18 +297,23 @@ export function CallMode({
 
   if (queue.length === 0) {
     return (
+      <div className="flex flex-col gap-4">
+      <ModePicker modes={modes} active={activeMode} />
       <Card>
         <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
           <PartyPopper className="h-8 w-8 text-brand" />
           <p className="display text-3xl text-fg">Ingen å ringe</p>
           <p className="max-w-md text-sm text-muted">
-            Ingen åpne leads med telefonnummer som skal ringes i dag. Leads med oppfølging senere dukker opp igjen den dagen.
+            {activeMode
+              ? "Ingen leads med telefonnummer i denne køen. Velg en annen kø over."
+              : "Ingen åpne leads med telefonnummer som skal ringes i dag. Leads med oppfølging senere dukker opp igjen den dagen."}
           </p>
           <Link href={backHref} className={buttonVariants({ variant: "outline", className: "mt-2" })}>
             <ArrowLeft /> Tilbake til leads
           </Link>
         </CardContent>
       </Card>
+      </div>
     );
   }
 
@@ -270,6 +323,7 @@ export function CallMode({
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
       <div className="flex flex-col gap-4">
+        <ModePicker modes={modes} active={activeMode} />
         <div className="flex items-center gap-4">
           <p className="shrink-0 text-sm text-muted">
             <span className="font-semibold text-fg">{Math.min(index + 1, queue.length)}</span> av {queue.length}

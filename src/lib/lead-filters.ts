@@ -2,6 +2,7 @@ import "server-only";
 import { fetchAll } from "@/lib/fetch-all";
 import type { createClient } from "@/lib/supabase/server";
 import type { Lead } from "@/lib/types";
+import { hasCallablePhone } from "@/lib/utils";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -20,7 +21,8 @@ export async function applyTodoFilter(
   todo: string | undefined
 ): Promise<Lead[]> {
   if (todo === "uncontacted") {
-    return leads.filter((l) => l.status === "new" || l.status === "assigned");
+    // Never called: still new/assigned and no registered call on the lead.
+    return leads.filter((l) => (l.status === "new" || l.status === "assigned") && !l.last_call_at);
   }
   if (todo === "overdue") {
     const now = Date.now();
@@ -76,7 +78,7 @@ export function callQueue(leads: Lead[]): Lead[] {
   };
 
   return leads
-    .filter((l) => OPEN.includes(l.status) && !!l.phone)
+    .filter((l) => OPEN.includes(l.status) && hasCallablePhone(l.phone))
     // A follow-up set for a time (e.g. «ring etter kl. 14») only joins the queue once it's due.
     .filter((l) => !l.next_follow_up_at || new Date(l.next_follow_up_at).getTime() <= now)
     .sort((a, b) => {
